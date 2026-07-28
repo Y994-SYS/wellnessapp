@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import com.alkanyazilim.wellnesapp.data.local.UserPreferences
 import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
 import com.alkanyazilim.wellnesapp.data.repository.HealthConnectManager
 import com.alkanyazilim.wellnesapp.ui.Screen
+import com.alkanyazilim.wellnesapp.ui.SETTINGS_ROUTE
 import com.alkanyazilim.wellnesapp.ui.tasks.TasksViewModel
 import com.alkanyazilim.wellnesapp.ui.water.WaterViewModel
 import java.time.LocalTime
@@ -80,18 +82,30 @@ fun HomeScreen(navController: NavController) {
             .padding(24.dp),
     ) {
         Spacer(Modifier.height(8.dp))
-        Text(
-            text = greeting,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Bugün formundasın 💪",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
 
-        Spacer(Modifier.height(28.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column {
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Bugün formundasın 💪",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = { navController.navigate(SETTINGS_ROUTE) }) {
+                Icon(Icons.Filled.Settings, contentDescription = "Ayarlar")
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
 
         SummaryCard(
             icon = Icons.Filled.DirectionsWalk,

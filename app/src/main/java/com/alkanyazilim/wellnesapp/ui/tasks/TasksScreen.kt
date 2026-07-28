@@ -166,9 +166,9 @@ private fun TaskRow(
                 .clickable { onClick() },
             colors = CardDefaults.cardColors(
                 containerColor = if (task.isCompleted)
-                    MaterialTheme.colorScheme.surfaceVariant
+                    categoryColor(task.category).copy(alpha = 0.08f)
                 else
-                    MaterialTheme.colorScheme.surface
+                    categoryColor(task.category).copy(alpha = 0.16f)
             )
         ) {
             Row(

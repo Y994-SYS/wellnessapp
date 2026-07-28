@@ -40,7 +40,9 @@ fun AppNavigation(startDestination: String? = null) {
             composable(Screen.WaterReminderSettings.route) {
                 WaterReminderSettingsScreen(onBack = { navController.popBackStack() })
             }
-
+            composable(com.alkanyazilim.wellnesapp.ui.SETTINGS_ROUTE) {
+                com.alkanyazilim.wellnesapp.ui.settings.SettingsScreen(onBack = { navController.popBackStack() })
+            }
             composable(
                 route = "steps_detail/{date}",
                 arguments = listOf(navArgument("date") { type = NavType.StringType })

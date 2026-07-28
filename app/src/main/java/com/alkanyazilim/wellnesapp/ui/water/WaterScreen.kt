@@ -41,6 +41,7 @@ import kotlin.math.ceil
 private val WaterBlue = Color(0xFF4FC3F7)
 private val WaterBlueDark = Color(0xFF0288D1)
 private val TrackColor = Color(0xFFE1F5FE)
+private val CardTint = Color(0xFFE3F4FD)
 
 @Composable
 fun WaterScreen(navController: NavHostController) {
@@ -96,34 +97,47 @@ fun WaterScreen(navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            WaterCircularGauge(
-                progress = animatedProgress,
-                consumed = consumed,
-                goal = goal
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                "$filledGlasses / $totalGlasses bardak içtin",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = WaterBlueDark
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(6),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 220.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = CardTint)
             ) {
-                items(totalGlasses) { index ->
-                    val isFilled = index < filledGlasses
-                    AnimatedGlassIcon(isFilled = isFilled)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    WaterCircularGauge(
+                        progress = animatedProgress,
+                        consumed = consumed,
+                        goal = goal
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        "$filledGlasses / $totalGlasses bardak içtin",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WaterBlueDark
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(6),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .heightIn(max = 220.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(totalGlasses) { index ->
+                            val isFilled = index < filledGlasses
+                            AnimatedGlassIcon(isFilled = isFilled)
+                        }
+                    }
                 }
             }
 

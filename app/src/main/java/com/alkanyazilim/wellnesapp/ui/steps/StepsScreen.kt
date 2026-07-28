@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-
+import androidx.compose.ui.graphics.Color
 @Composable
 fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
     val context = LocalContext.current
@@ -172,7 +172,9 @@ private fun TodayStepsCard(
 ) {
     val progress = (steps.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth() ,
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE0D1))
+    ){
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -229,7 +231,10 @@ private fun DailyStepsRow(day: DailySteps, onClick: () -> Unit) {
     val dayLabel = day.date.format(DateTimeFormatter.ofPattern("d MMMM", Locale("tr")))
     val weekdayLabel = day.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("tr"))
 
-    Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEDE3))
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,

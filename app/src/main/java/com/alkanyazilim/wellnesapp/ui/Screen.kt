@@ -16,5 +16,5 @@ sealed class Screen(val route: String, val title: String = "", val icon: ImageVe
     object WaterReminderSettings : Screen("water_reminder_settings")
     object Workout : Screen("workout", "Egzersiz", Icons.Filled.DirectionsRun)
 }
-
+const val SETTINGS_ROUTE = "settings"
 val bottomNavItems = listOf(Screen.Home, Screen.Steps, Screen.Water, Screen.Tasks,Screen.Workout)

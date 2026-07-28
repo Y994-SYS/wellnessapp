@@ -10,8 +10,16 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.alkanyazilim.wellnesapp.data.local.AppSettingsDataStore
+import com.alkanyazilim.wellnesapp.data.local.ThemeMode
 import com.alkanyazilim.wellnesapp.ui.AppNavigation
+import com.alkanyazilim.wellnesapp.ui.theme.WellnesAppTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -28,7 +36,19 @@ class MainActivity : ComponentActivity() {
         val startDestination = intent?.getStringExtra("navigate_to")
 
         setContent {
-            AppNavigation(startDestination = startDestination)
+            val context = LocalContext.current
+            val settingsStore = remember { AppSettingsDataStore(context) }
+            val themeMode by settingsStore.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+
+            val darkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            WellnesAppTheme(darkTheme = darkTheme) {
+                AppNavigation(startDestination = startDestination)
+            }
         }
     }
 
