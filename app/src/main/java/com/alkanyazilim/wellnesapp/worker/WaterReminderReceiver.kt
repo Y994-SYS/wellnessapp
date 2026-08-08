@@ -21,16 +21,26 @@ import kotlinx.coroutines.launch
 class WaterReminderReceiver : BroadcastReceiver() {
 
     companion object {
-        const val CHANNEL_ID = "water_reminder_channel"
+        // Farklı kanal ID'leri: biri sessiz, biri sesli
+        const val CHANNEL_ID_SILENT = "water_reminder_channel_silent"
+        const val CHANNEL_ID_SOUND = "water_reminder_channel_sound"
         const val NOTIFICATION_ID = 2001
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        showNotification(context)
-
-        // Bir sonraki alarmı kur (zincirleme)
         val store = WaterDataStore(context)
+
         CoroutineScope(Dispatchers.IO).launch {
+            val soundEnabled = store.soundEnabled.first()
+
+            // Sesli veya sessiz bildirimi göster
+            if (soundEnabled) {
+                showNotification(context)
+            } else {
+                showSilentNotification(context)
+            }
+
+            // Bir sonraki alarmı zamanla
             val interval = store.reminderIntervalMin.first()
             val start = store.reminderStartHour.first()
             val end = store.reminderEndHour.first()
@@ -41,8 +51,9 @@ class WaterReminderReceiver : BroadcastReceiver() {
         }
     }
 
+    // ---------- SESLİ BİLDİRİM ----------
     private fun showNotification(context: Context) {
-        createChannel(context)
+        createSoundChannel(context)
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -53,15 +64,16 @@ class WaterReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        // Normal bildirim sesi (alarm DEĞİL)
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // kendi ikonunla değiştir
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID_SOUND)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Su içme zamanı! 💧")
             .setContentText("Hedefine ulaşmak için bir bardak su içmeyi unutma.")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setSound(alarmSound)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)   // alarm değil, hatırlatma
+            .setSound(soundUri)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
@@ -70,26 +82,77 @@ class WaterReminderReceiver : BroadcastReceiver() {
         manager.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun createChannel(context: Context) {
+    private fun createSoundChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-                val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
 
-                val channel = NotificationChannel(
-                    CHANNEL_ID,
-                    "Su İçme Hatırlatıcı",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Su içmeyi hatırlatan alarm bildirimleri"
-                    setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), audioAttributes)
-                    enableVibration(true)
-                }
-                manager.createNotificationChannel(channel)
+            // Eski kanalı (varsa) sil – böylece yeni ses ayarları uygulanır
+            manager.deleteNotificationChannel("water_reminder_channel")   // eski yanlış kanal
+            manager.deleteNotificationChannel(CHANNEL_ID_SOUND)          // aynı isimle varsa
+
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)    // alarm DEĞİL
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            val channel = NotificationChannel(
+                CHANNEL_ID_SOUND,
+                "Su İçme Hatırlatıcı (Sesli)",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Su içme hatırlatıcı bildirimleri (sesli)"
+                setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), audioAttributes)
+                enableVibration(true)
             }
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    // ---------- SESSİZ BİLDİRİM ----------
+    private fun showSilentNotification(context: Context) {
+        createSilentChannel(context)
+
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to", "water")
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID_SILENT)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Su içme zamanı! 💧")
+            .setContentText("Hedefine ulaşmak için bir bardak su içmeyi unutma.")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun createSilentChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            // Eski kanalları temizle
+            manager.deleteNotificationChannel("water_reminder_channel")
+            manager.deleteNotificationChannel(CHANNEL_ID_SILENT)
+
+            val channel = NotificationChannel(
+                CHANNEL_ID_SILENT,
+                "Su İçme Hatırlatıcı (Sessiz)",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Sessiz su içme hatırlatıcı bildirimleri"
+                setSound(null, null)
+                enableVibration(false)
+            }
+            manager.createNotificationChannel(channel)
         }
     }
 }

@@ -1,28 +1,20 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.alkanyazilim.wellnesapp.ui.water
 
-import android.Manifest
-import android.app.AlarmManager
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
-import androidx.compose.material.icons.filled.ArrowBack
 
 private data class IntervalOption(val label: String, val minutes: Int)
 
@@ -45,91 +37,13 @@ fun WaterReminderSettingsScreen(onBack: () -> Unit) {
     val interval by viewModel.reminderIntervalMin.collectAsState()
     val startHour by viewModel.reminderStartHour.collectAsState()
     val endHour by viewModel.reminderEndHour.collectAsState()
+    val soundEnabled by viewModel.reminderSoundEnabled.collectAsState()
 
     var localEnabled by remember(enabled) { mutableStateOf(enabled) }
     var localInterval by remember(interval) { mutableStateOf(interval) }
     var localStartHour by remember(startHour) { mutableStateOf(startHour) }
     var localEndHour by remember(endHour) { mutableStateOf(endHour) }
-
-    var showExactAlarmDialog by remember { mutableStateOf(false) }
-
-    fun performSave() {
-        viewModel.saveReminderSettings(
-            enabled = localEnabled,
-            intervalMin = localInterval,
-            startHour = localStartHour,
-            endHour = localEndHour
-        )
-        onBack()
-    }
-
-    fun checkExactAlarmAndSave() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
-            if (!alarmManager.canScheduleExactAlarms()) {
-                showExactAlarmDialog = true
-                return
-            }
-        }
-        performSave()
-    }
-
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { _ ->
-        // Kullanıcı izni verse de vermese de devam ediyoruz (bildirim izni reddedilirse
-        // sistem bildirimi göstermez ama uygulama çökmez, alarm yine kurulur)
-        checkExactAlarmAndSave()
-    }
-
-    fun onSaveClicked() {
-        if (!localEnabled) {
-            performSave()
-            return
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val granted = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!granted) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                return
-            }
-        }
-
-        checkExactAlarmAndSave()
-    }
-
-    if (showExactAlarmDialog) {
-        AlertDialog(
-            onDismissRequest = { showExactAlarmDialog = false },
-            title = { Text("Tam zamanlı alarm izni gerekli") },
-            text = {
-                Text("Hatırlatıcıların tam zamanında gelmesi için sistem ayarlarından \"Alarmlar ve hatırlatıcılar\" iznini açman gerekiyor.")
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showExactAlarmDialog = false
-                    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                    }
-                    context.startActivity(intent)
-                }) {
-                    Text("Ayarlara Git")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showExactAlarmDialog = false
-                    performSave()
-                }) {
-                    Text("Yine de Kaydet")
-                }
-            }
-        )
-    }
+    var localSoundEnabled by remember(soundEnabled) { mutableStateOf(soundEnabled) }
 
     Scaffold(
         topBar = {
@@ -137,10 +51,7 @@ fun WaterReminderSettingsScreen(onBack: () -> Unit) {
                 title = { Text("Su Hatırlatıcı Ayarları") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            androidx.compose.material.icons.Icons.Default.ArrowBack,
-                            contentDescription = "Geri"
-                        )
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Geri")
                     }
                 }
             )
@@ -158,30 +69,39 @@ fun WaterReminderSettingsScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Hatırlatıcı", style = MaterialTheme.typography.titleMedium)
-                Switch(
-                    checked = localEnabled,
-                    onCheckedChange = { localEnabled = it }
-                )
+                Switch(checked = localEnabled, onCheckedChange = { localEnabled = it })
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Bildirim Sesi", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Açıksa alarm gibi çalar, ses tuşuyla susturabilirsin",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = localSoundEnabled, onCheckedChange = { localSoundEnabled = it })
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text("Sıklık", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
-            IntervalDropdown(
-                selectedMinutes = localInterval,
-                onSelected = { localInterval = it }
-            )
+            IntervalDropdown(selectedMinutes = localInterval, onSelected = { localInterval = it })
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text("Aktif Saat Aralığı", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 HourPicker(
                     label = "Başlangıç",
                     hour = localStartHour,
@@ -199,7 +119,16 @@ fun WaterReminderSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { onSaveClicked() },
+                onClick = {
+                    viewModel.saveReminderSettings(
+                        enabled = localEnabled,
+                        intervalMin = localInterval,
+                        startHour = localStartHour,
+                        endHour = localEndHour,
+                        soundEnabled = localSoundEnabled
+                    )
+                    onBack()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Kaydet")
@@ -214,30 +143,19 @@ private fun IntervalDropdown(selectedMinutes: Int, onSelected: (Int) -> Unit) {
     val selectedLabel = intervalOptions.firstOrNull { it.minutes == selectedMinutes }?.label
         ?: "$selectedMinutes dakika"
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
             value = selectedLabel,
             onValueChange = {},
             readOnly = true,
             label = { Text("Ne sıklıkla hatırlatılsın") },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
+            modifier = Modifier.menuAnchor().fillMaxWidth()
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             intervalOptions.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
-                    onClick = {
-                        onSelected(option.minutes)
-                        expanded = false
-                    }
+                    onClick = { onSelected(option.minutes); expanded = false }
                 )
             }
         }
@@ -245,39 +163,22 @@ private fun IntervalDropdown(selectedMinutes: Int, onSelected: (Int) -> Unit) {
 }
 
 @Composable
-private fun HourPicker(
-    label: String,
-    hour: Int,
-    onHourChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun HourPicker(label: String, hour: Int, onHourChange: (Int) -> Unit, modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = modifier
-    ) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
         OutlinedTextField(
             value = String.format("%02d:00", hour),
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
+            modifier = Modifier.menuAnchor().fillMaxWidth()
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             (0..23).forEach { h ->
                 DropdownMenuItem(
                     text = { Text(String.format("%02d:00", h)) },
-                    onClick = {
-                        onHourChange(h)
-                        expanded = false
-                    }
+                    onClick = { onHourChange(h); expanded = false }
                 )
             }
         }

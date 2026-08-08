@@ -1,6 +1,7 @@
 package com.alkanyazilim.wellnesapp.ui.steps
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,11 +20,13 @@ import androidx.navigation.NavController
 import com.alkanyazilim.wellnesapp.data.local.UserPreferences
 import com.alkanyazilim.wellnesapp.data.model.DailySteps
 import com.alkanyazilim.wellnesapp.data.repository.HealthConnectManager
+import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import androidx.compose.ui.graphics.Color
+
 @Composable
 fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
     val context = LocalContext.current
@@ -80,11 +83,16 @@ fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
     }
 
     if (errorMessage != null) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(AppColors.Background),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
                 text = errorMessage ?: "",
                 modifier = Modifier.padding(24.dp),
-                color = MaterialTheme.colorScheme.error
+                color = AppColors.ExerciseAccent // Mercan/Pembe - hata mesajı için
             )
         }
         return
@@ -92,20 +100,45 @@ fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
 
     when {
         !healthConnectManager.isAvailable() -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Health Connect bu cihazda kullanılamıyor")
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(AppColors.Background),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Health Connect bu cihazda kullanılamıyor",
+                    color = AppColors.TextSecondary
+                )
             }
         }
         !permissionsGranted -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Button(onClick = { permissionLauncher.launch(healthConnectManager.permissions) }) {
-                    Text("Adım verilerine erişim izni ver")
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(AppColors.Background),
+                contentAlignment = Alignment.Center
+            ) {
+                Button(
+                    onClick = { permissionLauncher.launch(healthConnectManager.permissions) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.StepsAccent
+                    )
+                ) {
+                    Text("Adım verilerine erişim izni ver", color = Color.White)
                 }
             }
         }
         todaySteps == null -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(AppColors.Background),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = AppColors.StepsAccent
+                )
             }
         }
         else -> {
@@ -134,7 +167,9 @@ private fun StepsContent(
     val calories = todaySteps * 0.04
 
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -153,6 +188,7 @@ private fun StepsContent(
                 text = "Geçmiş Günler",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary,
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -172,9 +208,12 @@ private fun TodayStepsCard(
 ) {
     val progress = (steps.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
 
-    Card(modifier = Modifier.fillMaxWidth() ,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE0D1))
-    ){
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = AppColors.Surface
+        )
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -185,9 +224,17 @@ private fun TodayStepsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Spacer(Modifier.width(24.dp))
-                Text("Bugün", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Bugün",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppColors.TextPrimary
+                )
                 IconButton(onClick = onGoalClick) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Hedef ayarla")
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = "Hedef ayarla",
+                        tint = AppColors.TextSecondary
+                    )
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -197,20 +244,42 @@ private fun TodayStepsCard(
                     progress = { progress },
                     modifier = Modifier.size(180.dp),
                     strokeWidth = 14.dp,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    color = AppColors.StepsAccent,
+                    trackColor = AppColors.StepsAccent.copy(alpha = 0.15f)
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "$steps", fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "/ $goal adım", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = "$steps",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+                    Text(
+                        text = "/ $goal adım",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppColors.TextSecondary
+                    )
                 }
             }
 
             Spacer(Modifier.height(20.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatItem("Mesafe", String.format(Locale.getDefault(), "%.2f km", distanceKm))
-                StatItem("Kalori", String.format(Locale.getDefault(), "%.0f kcal", calories))
-                StatItem("Hedef", "%${(progress * 100).toInt()}")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    label = "Mesafe",
+                    value = String.format(Locale.getDefault(), "%.2f km", distanceKm)
+                )
+                StatItem(
+                    label = "Kalori",
+                    value = String.format(Locale.getDefault(), "%.0f kcal", calories)
+                )
+                StatItem(
+                    label = "Hedef",
+                    value = "%${(progress * 100).toInt()}"
+                )
             }
         }
     }
@@ -219,8 +288,17 @@ private fun TodayStepsCard(
 @Composable
 private fun StatItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            value,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyLarge,
+            color = AppColors.TextPrimary
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.TextSecondary
+        )
     }
 }
 
@@ -232,8 +310,12 @@ private fun DailyStepsRow(day: DailySteps, onClick: () -> Unit) {
     val weekdayLabel = day.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("tr"))
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEDE3))
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = AppColors.Surface
+        )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -241,15 +323,27 @@ private fun DailyStepsRow(day: DailySteps, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(dayLabel, fontWeight = FontWeight.Bold)
-                Text(weekdayLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    dayLabel,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+                Text(
+                    weekdayLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary
+                )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("${day.steps} adım", fontWeight = FontWeight.Bold)
+                Text(
+                    "${day.steps} adım",
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
                 Text(
                     String.format(Locale.getDefault(), "%.2f km · %.0f kcal", distanceKm, calories),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AppColors.TextSecondary
                 )
             }
         }
@@ -264,48 +358,82 @@ private fun GoalPickerDialog(
 ) {
     var selectedGoal by remember { mutableStateOf(currentGoal) }
     val presets = listOf(6000, 6500, 7000, 7500, 8000, 9000, 10000, 12000, 15000)
+    val accentColor = AppColors.StepsAccent
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Günlük adım hedefi") },
+        containerColor = AppColors.Surface,
+        title = {
+            Text(
+                "Günlük adım hedefi",
+                color = AppColors.TextPrimary
+            )
+        },
         text = {
             Column {
                 Text(
                     text = "$selectedGoal adım",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
+                    color = accentColor,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    OutlinedButton(onClick = { selectedGoal = (selectedGoal - 500).coerceAtLeast(1000) }) {
+                    OutlinedButton(
+                        onClick = { selectedGoal = (selectedGoal - 500).coerceAtLeast(1000) },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = accentColor
+                        )
+                    ) {
                         Text("- 500")
                     }
-                    OutlinedButton(onClick = { selectedGoal = selectedGoal + 500 }) {
+                    OutlinedButton(
+                        onClick = { selectedGoal = selectedGoal + 500 },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = accentColor
+                        )
+                    ) {
                         Text("+ 500")
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                Text("Önerilen değerler:", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Önerilen değerler:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary
+                )
                 Spacer(Modifier.height(8.dp))
-                LazyColumnPresetRow(presets = presets, selectedGoal = selectedGoal) {
-                    selectedGoal = it
-                }
+                LazyColumnPresetRow(
+                    presets = presets,
+                    selectedGoal = selectedGoal,
+                    accentColor = accentColor,
+                    onSelect = { selectedGoal = it }
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selectedGoal) }) { Text("Tamam") }
+            TextButton(onClick = { onConfirm(selectedGoal) }) {
+                Text("Tamam", color = accentColor)
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("İptal") }
+            TextButton(onClick = onDismiss) {
+                Text("İptal", color = AppColors.TextSecondary)
+            }
         }
     )
 }
 
 @Composable
-private fun LazyColumnPresetRow(presets: List<Int>, selectedGoal: Int, onSelect: (Int) -> Unit) {
+private fun LazyColumnPresetRow(
+    presets: List<Int>,
+    selectedGoal: Int,
+    accentColor: Color,
+    onSelect: (Int) -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -314,7 +442,13 @@ private fun LazyColumnPresetRow(presets: List<Int>, selectedGoal: Int, onSelect:
             FilterChip(
                 selected = preset == selectedGoal,
                 onClick = { onSelect(preset) },
-                label = { Text("$preset") }
+                label = { Text("$preset") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = accentColor,
+                    selectedLabelColor = Color.White,
+                    containerColor = AppColors.Surface,
+                    labelColor = AppColors.TextPrimary
+                )
             )
         }
     }

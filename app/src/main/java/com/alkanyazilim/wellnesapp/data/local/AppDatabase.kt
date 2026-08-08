@@ -17,7 +17,7 @@ class Converters {
 
 @Database(
     entities = [TaskEntity::class, TaskCompletionEntity::class, RunSessionEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

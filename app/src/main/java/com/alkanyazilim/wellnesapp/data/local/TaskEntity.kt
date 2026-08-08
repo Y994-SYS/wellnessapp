@@ -14,5 +14,8 @@ data class TaskEntity(
     val category: TaskCategory,
     val isRecurring: Boolean,
     val createdDate: String,
-    val icon: String = "📝"
+    val icon: String = "📝",
+    val reminderEnabled: Boolean = false,
+    val reminderHour: Int? = null,
+    val reminderMinute: Int? = null
 )

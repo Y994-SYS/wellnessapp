@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alkanyazilim.wellnesapp.data.model.ExerciseTemplate
 import com.alkanyazilim.wellnesapp.data.model.templatesForCategory
+import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlinx.coroutines.delay
 import java.util.Locale
 import android.speech.tts.TextToSpeech
@@ -38,7 +39,7 @@ private enum class SessionState { FORM, ACTIVE, RESTING, FINISHED }
 @Composable
 fun CustomExerciseScreen(
     categoryLabel: String,
-    accentColor: Color = Color(0xFF7E57C2),
+    accentColor: Color = AppColors.ExerciseCardio,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -208,14 +209,25 @@ private fun ExerciseForm(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(AppColors.Background)
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
-        Text("$categoryLabel Egzersizi", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(
+            "$categoryLabel Egzersizi",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.TextPrimary
+        )
         Spacer(Modifier.height(20.dp))
 
         if (templates.isNotEmpty()) {
-            Text("Hazır Egzersizler", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Hazır Egzersizler",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextSecondary
+            )
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(templates) { template ->
@@ -246,7 +258,12 @@ private fun ExerciseForm(
                 value = exerciseName,
                 onValueChange = onNameChange,
                 label = { Text("Egzersiz adı") },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = accentColor,
+                    cursorColor = accentColor,
+                    focusedLabelColor = accentColor
+                )
             )
         }
 
@@ -254,7 +271,8 @@ private fun ExerciseForm(
             Spacer(Modifier.height(20.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = AppColors.Surface)
             ) {
                 Column {
                     Box(
@@ -286,7 +304,12 @@ private fun ExerciseForm(
                     }
 
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Nasıl yapılır?", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Nasıl yapılır?",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = AppColors.TextPrimary
+                        )
                         Spacer(Modifier.height(10.dp))
                         selectedInstructions.forEachIndexed { index, step ->
                             Row(
@@ -308,7 +331,11 @@ private fun ExerciseForm(
                                     )
                                 }
                                 Spacer(Modifier.width(10.dp))
-                                Text(step, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    step,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColors.TextSecondary
+                                )
                             }
                         }
                     }
@@ -317,62 +344,131 @@ private fun ExerciseForm(
         }
 
         Spacer(Modifier.height(20.dp))
-        Text("Mod", style = MaterialTheme.typography.bodyMedium)
+        Text(
+            "Mod",
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.TextPrimary
+        )
         Spacer(Modifier.height(8.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = mode == ExerciseMode.SURELI,
                 onClick = { onModeChange(ExerciseMode.SURELI) },
-                label = { Text("Süreli") }
+                label = { Text("Süreli") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = accentColor,
+                    selectedLabelColor = Color.White,
+                    containerColor = AppColors.Surface,
+                    labelColor = AppColors.TextPrimary
+                )
             )
             FilterChip(
                 selected = mode == ExerciseMode.SET_BAZLI,
                 onClick = { onModeChange(ExerciseMode.SET_BAZLI) },
-                label = { Text("Set bazlı") }
+                label = { Text("Set bazlı") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = accentColor,
+                    selectedLabelColor = Color.White,
+                    containerColor = AppColors.Surface,
+                    labelColor = AppColors.TextPrimary
+                )
             )
         }
 
         Spacer(Modifier.height(24.dp))
 
         if (mode == ExerciseMode.SURELI) {
-            Text("Süre", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "Süre",
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { onDurationChange((durationSeconds - 15).coerceAtLeast(15)) }) {
+                OutlinedButton(
+                    onClick = { onDurationChange((durationSeconds - 15).coerceAtLeast(15)) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = accentColor
+                    )
+                ) {
                     Text("- 15sn")
                 }
                 Spacer(Modifier.width(16.dp))
                 Text(
                     text = String.format(Locale.getDefault(), "%d:%02d", durationSeconds / 60, durationSeconds % 60),
                     fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
                 )
                 Spacer(Modifier.width(16.dp))
-                OutlinedButton(onClick = { onDurationChange(durationSeconds + 15) }) {
+                OutlinedButton(
+                    onClick = { onDurationChange(durationSeconds + 15) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = accentColor
+                    )
+                ) {
                     Text("+ 15sn")
                 }
             }
         } else {
-            Text("Set Sayısı", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "Set Sayısı",
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { onTotalSetsChange((totalSets - 1).coerceAtLeast(1)) }) { Text("-") }
+                OutlinedButton(
+                    onClick = { onTotalSetsChange((totalSets - 1).coerceAtLeast(1)) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = accentColor
+                    )
+                ) { Text("-") }
                 Spacer(Modifier.width(16.dp))
-                Text("$totalSets set", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "$totalSets set",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
                 Spacer(Modifier.width(16.dp))
-                OutlinedButton(onClick = { onTotalSetsChange(totalSets + 1) }) { Text("+") }
+                OutlinedButton(
+                    onClick = { onTotalSetsChange(totalSets + 1) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = accentColor
+                    )
+                ) { Text("+") }
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("Tekrar Sayısı (set başına)", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "Tekrar Sayısı (set başına)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { onRepsChange((repsPerSet - 1).coerceAtLeast(1)) }) { Text("-") }
+                OutlinedButton(
+                    onClick = { onRepsChange((repsPerSet - 1).coerceAtLeast(1)) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = accentColor
+                    )
+                ) { Text("-") }
                 Spacer(Modifier.width(16.dp))
-                Text("$repsPerSet tekrar", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "$repsPerSet tekrar",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
                 Spacer(Modifier.width(16.dp))
-                OutlinedButton(onClick = { onRepsChange(repsPerSet + 1) }) { Text("+") }
+                OutlinedButton(
+                    onClick = { onRepsChange(repsPerSet + 1) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = accentColor
+                    )
+                ) { Text("+") }
             }
         }
 
@@ -384,7 +480,7 @@ private fun ExerciseForm(
             colors = ButtonDefaults.buttonColors(containerColor = accentColor),
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("Başla", fontSize = 18.sp)
+            Text("Başla", fontSize = 18.sp, color = Color.White)
         }
     }
 }
@@ -425,7 +521,8 @@ private fun ExerciseTemplateChip(
             style = MaterialTheme.typography.bodySmall,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             maxLines = 2,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = if (isSelected) AppColors.TextPrimary else AppColors.TextSecondary
         )
     }
 }
@@ -443,11 +540,24 @@ private fun ActiveExerciseView(
     onSetComplete: () -> Unit,
     onStop: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
             Text(icon, fontSize = 40.sp)
             Spacer(Modifier.height(8.dp))
-            Text(exerciseName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                exerciseName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(24.dp))
 
             if (mode == ExerciseMode.SURELI) {
@@ -458,9 +568,18 @@ private fun ActiveExerciseView(
                     color = accentColor
                 )
             } else {
-                Text("Set $currentSet / $totalSets", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = accentColor)
+                Text(
+                    "Set $currentSet / $totalSets",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
                 Spacer(Modifier.height(8.dp))
-                Text("$repsPerSet tekrar hedefi", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "$repsPerSet tekrar hedefi",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.TextSecondary
+                )
             }
 
             Spacer(Modifier.height(40.dp))
@@ -471,14 +590,17 @@ private fun ActiveExerciseView(
                     colors = ButtonDefaults.buttonColors(containerColor = accentColor),
                     modifier = Modifier.fillMaxWidth().height(56.dp)
                 ) {
-                    Text("Seti Tamamla", fontSize = 18.sp)
+                    Text("Seti Tamamla", fontSize = 18.sp, color = Color.White)
                 }
                 Spacer(Modifier.height(12.dp))
             }
 
             OutlinedButton(
                 onClick = onStop,
-                modifier = Modifier.fillMaxWidth().height(48.dp)
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = AppColors.TextSecondary
+                )
             ) {
                 Text("Durdur")
             }
@@ -488,15 +610,39 @@ private fun ActiveExerciseView(
 
 @Composable
 private fun RestingView(remainingSeconds: Int, nextSet: Int, accentColor: Color, onSkipRest: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
+        contentAlignment = Alignment.Center
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Dinlenme", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Dinlenme",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(16.dp))
-            Text("$remainingSeconds sn", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = accentColor)
+            Text(
+                "$remainingSeconds sn",
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Bold,
+                color = accentColor
+            )
             Spacer(Modifier.height(8.dp))
-            Text("Sıradaki: Set $nextSet", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Sıradaki: Set $nextSet",
+                style = MaterialTheme.typography.bodyLarge,
+                color = AppColors.TextSecondary
+            )
             Spacer(Modifier.height(32.dp))
-            OutlinedButton(onClick = onSkipRest) {
+            OutlinedButton(
+                onClick = onSkipRest,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = accentColor
+                )
+            ) {
                 Text("Dinlenmeyi Atla")
             }
         }
@@ -505,18 +651,31 @@ private fun RestingView(remainingSeconds: Int, nextSet: Int, accentColor: Color,
 
 @Composable
 private fun FinishedView(exerciseName: String, accentColor: Color, onDone: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
             Text("🎉", fontSize = 64.sp)
             Spacer(Modifier.height(16.dp))
-            Text("$exerciseName tamamlandı!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "$exerciseName tamamlandı!",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(32.dp))
             Button(
                 onClick = onDone,
                 colors = ButtonDefaults.buttonColors(containerColor = accentColor),
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
-                Text("Tamam", fontSize = 18.sp)
+                Text("Tamam", fontSize = 18.sp, color = Color.White)
             }
         }
     }

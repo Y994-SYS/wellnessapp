@@ -31,6 +31,7 @@ import com.alkanyazilim.wellnesapp.data.local.TaskCategory
 import com.alkanyazilim.wellnesapp.data.model.TaskTemplate
 import com.alkanyazilim.wellnesapp.data.model.taskTemplates
 import com.alkanyazilim.wellnesapp.data.repository.TaskWithStatus
+import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 
 private fun categoryLabel(category: TaskCategory): String = when (category) {
     TaskCategory.SAGLIK -> "Sağlık"
@@ -39,9 +40,9 @@ private fun categoryLabel(category: TaskCategory): String = when (category) {
 }
 
 private fun categoryColor(category: TaskCategory): Color = when (category) {
-    TaskCategory.SAGLIK -> Color(0xFF4CAF50)
-    TaskCategory.SPOR -> Color(0xFFFF9800)
-    TaskCategory.KISISEL -> Color(0xFF7E57C2)
+    TaskCategory.SAGLIK -> AppColors.TasksAccent  // Yeşil
+    TaskCategory.SPOR -> AppColors.StepsAccent    // Turuncu
+    TaskCategory.KISISEL -> AppColors.HomeAccent  // Mor
 }
 
 @Composable
@@ -60,24 +61,40 @@ fun TasksScreen(modifier: Modifier = Modifier) {
     val orderedCategories = listOf(TaskCategory.SAGLIK, TaskCategory.SPOR, TaskCategory.KISISEL)
 
     Scaffold(
+        modifier = Modifier.background(AppColors.Background),
+        containerColor = AppColors.Background,
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Görev ekle")
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = AppColors.TasksAccent
+            ) {
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Görev ekle",
+                    tint = Color.White
+                )
             }
         }
     ) { padding ->
         if (tasks.isEmpty()) {
             Box(
-                modifier = modifier.padding(padding).fillMaxSize(),
+                modifier = modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .background(AppColors.Background),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Henüz görev yok. + ile ekleyebilirsin.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Henüz görev yok. + ile ekleyebilirsin.",
+                    color = AppColors.TextSecondary
+                )
             }
         } else {
             LazyColumn(
                 modifier = modifier
                     .padding(padding)
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .background(AppColors.Background),
                 contentPadding = PaddingValues(20.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -144,7 +161,8 @@ private fun CategoryHeader(category: TaskCategory, count: Int) {
         Text(
             text = "${categoryLabel(category)} ($count)",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = AppColors.TextPrimary
         )
     }
 }
@@ -192,23 +210,31 @@ private fun TaskRow(
                     Text(
                         text = task.title,
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-                        color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                        color = if (task.isCompleted) AppColors.TextSecondary else AppColors.TextPrimary
                     )
                     if (task.isRecurring) {
                         Text(
                             text = "Her gün tekrarlar",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AppColors.TextSecondary
                         )
                     }
                 }
 
                 Checkbox(
                     checked = task.isCompleted,
-                    onCheckedChange = { onToggle() }
+                    onCheckedChange = { onToggle() },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = categoryColor(task.category),
+                        uncheckedColor = AppColors.TextSecondary
+                    )
                 )
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Sil", tint = MaterialTheme.colorScheme.error)
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "Sil",
+                        tint = AppColors.ExerciseAccent // Mercan/Pembe - silme işlemi için uygun
+                    )
                 }
             }
         }
@@ -227,14 +253,26 @@ private fun TaskDialog(
     var selectedIcon by remember { mutableStateOf(initialTask?.icon ?: "📝") }
 
     val isEditing = initialTask != null
+    val accentColor = categoryColor(selectedCategory)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isEditing) "Görevi Düzenle" else "Yeni Görev") },
+        containerColor = AppColors.Surface,
+        title = {
+            Text(
+                if (isEditing) "Görevi Düzenle" else "Yeni Görev",
+                color = AppColors.TextPrimary
+            )
+        },
         text = {
             Column {
                 if (!isEditing) {
-                    Text("Hazır Görevler", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Hazır Görevler",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
                     Spacer(Modifier.height(8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(taskTemplates) { template ->
@@ -255,7 +293,7 @@ private fun TaskDialog(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .background(categoryColor(selectedCategory).copy(alpha = 0.15f), shape = CircleShape),
+                            .background(accentColor.copy(alpha = 0.15f), shape = CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(selectedIcon, fontSize = 22.sp)
@@ -265,12 +303,21 @@ private fun TaskDialog(
                         value = title,
                         onValueChange = { title = it },
                         label = { Text("Görev başlığı") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = accentColor,
+                            cursorColor = accentColor,
+                            focusedLabelColor = accentColor
+                        )
                     )
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Text("İkon", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "İkon",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.TextPrimary
+                )
                 Spacer(Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(commonIcons) { emoji ->
@@ -278,7 +325,7 @@ private fun TaskDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .background(
-                                    if (emoji == selectedIcon) categoryColor(selectedCategory).copy(alpha = 0.3f) else Color.Transparent,
+                                    if (emoji == selectedIcon) accentColor.copy(alpha = 0.3f) else Color.Transparent,
                                     shape = CircleShape
                                 )
                                 .clickable { selectedIcon = emoji },
@@ -290,15 +337,26 @@ private fun TaskDialog(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Text("Kategori", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Kategori",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.TextPrimary
+                )
                 Spacer(Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TaskCategory.values().forEach { category ->
+                        val categoryAccent = categoryColor(category)
                         FilterChip(
                             selected = selectedCategory == category,
                             onClick = { selectedCategory = category },
-                            label = { Text(categoryLabel(category)) }
+                            label = { Text(categoryLabel(category)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = categoryAccent,
+                                selectedLabelColor = Color.White,
+                                containerColor = AppColors.Surface,
+                                labelColor = AppColors.TextPrimary
+                            )
                         )
                     }
                 }
@@ -310,8 +368,18 @@ private fun TaskDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Her gün tekrarlansın")
-                    Switch(checked = isRecurring, onCheckedChange = { isRecurring = it })
+                    Text(
+                        "Her gün tekrarlansın",
+                        color = AppColors.TextPrimary
+                    )
+                    Switch(
+                        checked = isRecurring,
+                        onCheckedChange = { isRecurring = it },
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = accentColor,
+                            checkedThumbColor = Color.White
+                        )
+                    )
                 }
             }
         },
@@ -320,17 +388,24 @@ private fun TaskDialog(
                 onClick = { if (title.isNotBlank()) onConfirm(title.trim(), selectedCategory, isRecurring, selectedIcon) },
                 enabled = title.isNotBlank()
             ) {
-                Text(if (isEditing) "Kaydet" else "Ekle")
+                Text(
+                    if (isEditing) "Kaydet" else "Ekle",
+                    color = if (title.isNotBlank()) accentColor else AppColors.TextSecondary
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("İptal") }
+            TextButton(onClick = onDismiss) {
+                Text("İptal", color = AppColors.TextSecondary)
+            }
         }
     )
 }
 
 @Composable
 private fun TemplateChip(template: TaskTemplate, onClick: () -> Unit) {
+    val accentColor = categoryColor(template.category)
+
     Column(
         modifier = Modifier
             .width(72.dp)
@@ -340,7 +415,7 @@ private fun TemplateChip(template: TaskTemplate, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .background(categoryColor(template.category).copy(alpha = 0.15f), shape = CircleShape),
+                .background(accentColor.copy(alpha = 0.15f), shape = CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text(template.icon, fontSize = 22.sp)
@@ -350,7 +425,8 @@ private fun TemplateChip(template: TaskTemplate, onClick: () -> Unit) {
             text = template.title,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 2,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            color = AppColors.TextSecondary
         )
     }
 }

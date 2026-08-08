@@ -36,13 +36,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
 import com.alkanyazilim.wellnesapp.ui.Screen
+import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlin.math.ceil
-
-private val WaterBlue = Color(0xFF4FC3F7)
-private val WaterBlueDark = Color(0xFF0288D1)
-private val TrackColor = Color(0xFFE1F5FE)
-private val CardTint = Color(0xFFE3F4FD)
-
+import androidx.compose.foundation.background
 @Composable
 fun WaterScreen(navController: NavHostController) {
     val context = LocalContext.current
@@ -64,6 +60,8 @@ fun WaterScreen(navController: NavHostController) {
     val filledGlasses = (consumed / glass).coerceIn(0, totalGlasses)
 
     Scaffold(
+        modifier = Modifier.background(AppColors.Background),
+        containerColor = AppColors.Background,
         topBar = {
             TopAppBar(
                 title = {
@@ -71,10 +69,13 @@ fun WaterScreen(navController: NavHostController) {
                         Icon(
                             Icons.Filled.WaterDrop,
                             contentDescription = null,
-                            tint = WaterBlueDark,
+                            tint = AppColors.WaterAccent,
                             modifier = Modifier.padding(end = 8.dp)
                         )
-                        Text("Su Takibi")
+                        Text(
+                            "Su Takibi",
+                            color = AppColors.TextPrimary
+                        )
                     }
                 },
                 actions = {
@@ -83,9 +84,18 @@ fun WaterScreen(navController: NavHostController) {
                             navController.navigate(Screen.WaterReminderSettings.route)
                         }
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Hatırlatıcı Ayarları")
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Hatırlatıcı Ayarları",
+                            tint = AppColors.TextSecondary
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = AppColors.Background,
+                    titleContentColor = AppColors.TextPrimary,
+                    actionIconContentColor = AppColors.TextSecondary
+                )
             )
         }
     ) { padding ->
@@ -93,13 +103,16 @@ fun WaterScreen(navController: NavHostController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
+                .padding(24.dp)
+                .background(AppColors.Background),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = CardTint)
+                colors = CardDefaults.cardColors(
+                    containerColor = AppColors.Surface
+                )
             ) {
                 Column(
                     modifier = Modifier
@@ -119,7 +132,7 @@ fun WaterScreen(navController: NavHostController) {
                         "$filledGlasses / $totalGlasses bardak içtin",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = WaterBlueDark
+                        color = AppColors.WaterAccent
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -149,14 +162,21 @@ fun WaterScreen(navController: NavHostController) {
             ) {
                 OutlinedButton(
                     onClick = { viewModel.removeGlass() },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = WaterBlueDark)
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = AppColors.WaterAccent
+                    )
                 ) {
                     Icon(Icons.Default.Remove, contentDescription = "Azalt")
                 }
-                Text("$glass ml / bardak")
+                Text(
+                    "$glass ml / bardak",
+                    color = AppColors.TextPrimary
+                )
                 Button(
                     onClick = { viewModel.addGlass() },
-                    colors = ButtonDefaults.buttonColors(containerColor = WaterBlueDark)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.WaterAccent
+                    )
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Ekle")
                 }
@@ -176,7 +196,7 @@ private fun AnimatedGlassIcon(isFilled: Boolean) {
         label = "glassScale"
     )
     val tint by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isFilled) WaterBlueDark else Color.LightGray,
+        targetValue = if (isFilled) AppColors.WaterAccent else AppColors.TextSecondary,
         animationSpec = tween(durationMillis = 300),
         label = "glassColor"
     )
@@ -202,16 +222,24 @@ private fun WaterCircularGauge(progress: Float, consumed: Int, goal: Int) {
     ) {
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
             val strokeWidth = 16.dp.toPx()
+            val waterColor = AppColors.WaterAccent
+
+            // Track (arka plan) çizimi
             drawArc(
-                color = TrackColor,
+                color = waterColor.copy(alpha = 0.15f),
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
+
+            // Progress çizimi
             drawArc(
                 brush = Brush.linearGradient(
-                    colors = listOf(WaterBlue, WaterBlueDark),
+                    colors = listOf(
+                        waterColor.copy(alpha = 0.7f),
+                        waterColor
+                    ),
                     start = Offset(0f, 0f),
                     end = Offset(size.width, size.height)
                 ),
@@ -226,18 +254,19 @@ private fun WaterCircularGauge(progress: Float, consumed: Int, goal: Int) {
             Icon(
                 Icons.Filled.WaterDrop,
                 contentDescription = null,
-                tint = WaterBlueDark,
+                tint = AppColors.WaterAccent,
                 modifier = Modifier.size(28.dp)
             )
             Text(
                 "${(progress * 100).toInt()}%",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
             )
             Text(
                 "$consumed / $goal ml",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = AppColors.TextSecondary
             )
         }
     }

@@ -17,10 +17,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alkanyazilim.wellnesapp.data.local.ThemeMode
+import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlinx.coroutines.launch
-
-private val SettingsCardTint = Color(0xFFEEE6FA)
-
+import androidx.compose.foundation.background
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -44,14 +43,30 @@ fun SettingsScreen(onBack: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
+        modifier = Modifier.background(AppColors.Background),
+        containerColor = AppColors.Background,
         topBar = {
             TopAppBar(
-                title = { Text("Ayarlar") },
+                title = {
+                    Text(
+                        "Ayarlar",
+                        color = AppColors.TextPrimary
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Geri",
+                            tint = AppColors.TextPrimary
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = AppColors.Background,
+                    titleContentColor = AppColors.TextPrimary,
+                    navigationIconContentColor = AppColors.TextPrimary
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -60,6 +75,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .padding(padding)
                 .padding(20.dp)
+                .background(AppColors.Background)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -68,17 +84,35 @@ fun SettingsScreen(onBack: () -> Unit) {
                     FilterChip(
                         selected = themeMode == ThemeMode.LIGHT,
                         onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
-                        label = { Text("Açık") }
+                        label = { Text("Açık", color = AppColors.TextPrimary) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AppColors.HomeAccent,
+                            selectedLabelColor = Color.White,
+                            containerColor = AppColors.Surface,
+                            labelColor = AppColors.TextPrimary
+                        )
                     )
                     FilterChip(
                         selected = themeMode == ThemeMode.DARK,
                         onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
-                        label = { Text("Koyu") }
+                        label = { Text("Koyu", color = AppColors.TextPrimary) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AppColors.HomeAccent,
+                            selectedLabelColor = Color.White,
+                            containerColor = AppColors.Surface,
+                            labelColor = AppColors.TextPrimary
+                        )
                     )
                     FilterChip(
                         selected = themeMode == ThemeMode.SYSTEM,
                         onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
-                        label = { Text("Sistem") }
+                        label = { Text("Sistem", color = AppColors.TextPrimary) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AppColors.HomeAccent,
+                            selectedLabelColor = Color.White,
+                            containerColor = AppColors.Surface,
+                            labelColor = AppColors.TextPrimary
+                        )
                     )
                 }
             }
@@ -87,8 +121,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                 OutlinedTextField(
                     value = nameField,
                     onValueChange = { nameField = it },
-                    label = { Text("İsim") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("İsim", color = AppColors.TextSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AppColors.HomeAccent,
+                        focusedLabelColor = AppColors.HomeAccent,
+                        cursorColor = AppColors.HomeAccent,
+                        unfocusedBorderColor = AppColors.TextSecondary.copy(alpha = 0.3f)
+                    )
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -96,25 +136,43 @@ fun SettingsScreen(onBack: () -> Unit) {
                     OutlinedTextField(
                         value = weightField,
                         onValueChange = { weightField = it.filter { c -> c.isDigit() } },
-                        label = { Text("Kilo (kg)") },
+                        label = { Text("Kilo (kg)", color = AppColors.TextSecondary) },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AppColors.HomeAccent,
+                            focusedLabelColor = AppColors.HomeAccent,
+                            cursorColor = AppColors.HomeAccent,
+                            unfocusedBorderColor = AppColors.TextSecondary.copy(alpha = 0.3f)
+                        )
                     )
                     OutlinedTextField(
                         value = heightField,
                         onValueChange = { heightField = it.filter { c -> c.isDigit() } },
-                        label = { Text("Boy (cm)") },
+                        label = { Text("Boy (cm)", color = AppColors.TextSecondary) },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AppColors.HomeAccent,
+                            focusedLabelColor = AppColors.HomeAccent,
+                            cursorColor = AppColors.HomeAccent,
+                            unfocusedBorderColor = AppColors.TextSecondary.copy(alpha = 0.3f)
+                        )
                     )
                 }
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = ageField,
                     onValueChange = { ageField = it.filter { c -> c.isDigit() } },
-                    label = { Text("Yaş") },
+                    label = { Text("Yaş", color = AppColors.TextSecondary) },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(0.5f)
+                    modifier = Modifier.fillMaxWidth(0.5f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AppColors.HomeAccent,
+                        focusedLabelColor = AppColors.HomeAccent,
+                        cursorColor = AppColors.HomeAccent,
+                        unfocusedBorderColor = AppColors.TextSecondary.copy(alpha = 0.3f)
+                    )
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -129,9 +187,12 @@ fun SettingsScreen(onBack: () -> Unit) {
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar("Profil kaydedildi")
                         }
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.HomeAccent
+                    )
                 ) {
-                    Text("Profili Kaydet")
+                    Text("Profili Kaydet", color = Color.White)
                 }
             }
 
@@ -141,6 +202,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     value = stepGoal,
                     step = 500,
                     unit = "adım",
+                    accentColor = AppColors.StepsAccent,
                     onChange = { viewModel.setStepGoal(it) }
                 )
                 Spacer(Modifier.height(16.dp))
@@ -149,6 +211,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     value = waterGoal,
                     step = 250,
                     unit = "ml",
+                    accentColor = AppColors.WaterAccent,
                     onChange = { viewModel.setWaterGoal(it) }
                 )
                 Spacer(Modifier.height(16.dp))
@@ -157,6 +220,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     value = glassSize,
                     step = 50,
                     unit = "ml",
+                    accentColor = AppColors.WaterAccent,
                     onChange = { viewModel.setGlassSize(it) }
                 )
             }
@@ -170,10 +234,17 @@ fun SettingsScreen(onBack: () -> Unit) {
 private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SettingsCardTint)
+        colors = CardDefaults.cardColors(
+            containerColor = AppColors.Surface
+        )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(12.dp))
             content()
         }
@@ -186,19 +257,39 @@ private fun GoalStepperRow(
     value: Int,
     step: Int,
     unit: String,
+    accentColor: Color,
     onChange: (Int) -> Unit
 ) {
     Column {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.TextPrimary
+        )
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { onChange((value - step).coerceAtLeast(step)) }) {
+            OutlinedButton(
+                onClick = { onChange((value - step).coerceAtLeast(step)) },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = accentColor
+                )
+            ) {
                 Text("-")
             }
             Spacer(Modifier.width(16.dp))
-            Text("$value $unit", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "$value $unit",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.width(16.dp))
-            OutlinedButton(onClick = { onChange(value + step) }) {
+            OutlinedButton(
+                onClick = { onChange(value + step) },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = accentColor
+                )
+            ) {
                 Text("+")
             }
         }

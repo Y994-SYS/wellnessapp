@@ -28,12 +28,9 @@ import com.alkanyazilim.wellnesapp.data.repository.HealthConnectManager
 import com.alkanyazilim.wellnesapp.ui.Screen
 import com.alkanyazilim.wellnesapp.ui.SETTINGS_ROUTE
 import com.alkanyazilim.wellnesapp.ui.tasks.TasksViewModel
+import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import com.alkanyazilim.wellnesapp.ui.water.WaterViewModel
 import java.time.LocalTime
-
-private val StepsColor = Color(0xFFFF7043)
-private val WaterColor = Color(0xFF0288D1)
-private val TasksColor = Color(0xFF43A047)
 
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -79,6 +76,7 @@ fun HomeScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(AppColors.Background) // Nötr arka plan
             .padding(24.dp),
     ) {
         Spacer(Modifier.height(8.dp))
@@ -92,12 +90,13 @@ fun HomeScreen(navController: NavController) {
                 Text(
                     text = greeting,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary // Ana yazı rengi
                 )
                 Text(
                     text = "Bugün formundasın 💪",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AppColors.TextSecondary // İkincil yazı rengi
                 )
             }
             IconButton(onClick = { navController.navigate(SETTINGS_ROUTE) }) {
@@ -109,7 +108,7 @@ fun HomeScreen(navController: NavController) {
 
         SummaryCard(
             icon = Icons.Filled.DirectionsWalk,
-            color = StepsColor,
+            color = AppColors.StepsAccent,
             title = "Adım",
             currentText = todaySteps?.toString() ?: "--",
             goalText = "/ $stepGoal adım",
@@ -121,7 +120,7 @@ fun HomeScreen(navController: NavController) {
 
         SummaryCard(
             icon = Icons.Filled.WaterDrop,
-            color = WaterColor,
+            color = AppColors.WaterAccent,
             title = "Su",
             currentText = "$waterConsumed ml",
             goalText = "/ $waterGoal ml",
@@ -130,7 +129,7 @@ fun HomeScreen(navController: NavController) {
             trailingAction = {
                 FilledIconButton(
                     onClick = { waterViewModel.addGlass() },
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = WaterColor)
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = AppColors.WaterAccent)
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "Bir bardak ekle")
                 }
@@ -141,7 +140,7 @@ fun HomeScreen(navController: NavController) {
 
         SummaryCard(
             icon = Icons.Filled.CheckCircle,
-            color = TasksColor,
+            color = AppColors.TasksAccent,
             title = "Görevler",
             currentText = "$completedTasks",
             goalText = "/ $totalTasks tamamlandı",
@@ -166,7 +165,8 @@ private fun SummaryCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface) // Kart yüzeyi
     ) {
         Row(
             modifier = Modifier
@@ -187,7 +187,12 @@ private fun SummaryCard(
             Spacer(Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextPrimary
+                )
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         currentText,
@@ -198,7 +203,7 @@ private fun SummaryCard(
                     Text(
                         " $goalText",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AppColors.TextSecondary
                     )
                 }
                 Spacer(Modifier.height(8.dp))

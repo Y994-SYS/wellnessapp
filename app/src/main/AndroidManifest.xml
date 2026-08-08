@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <application
         android:allowBackup="true"
@@ -19,6 +21,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WellnesApp">
 
+        <receiver android:name=".worker.TaskReminderReceiver" android:exported="false" />
         <receiver android:name=".worker.WaterReminderReceiver" android:exported="false" />
         <receiver android:name=".worker.BootReceiver" android:exported="false">
             <intent-filter>
@@ -51,7 +54,16 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
             </intent-filter>
         </activity-alias>
+        <service
+            android:name=".worker.WaterAlarmService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
+        <activity
+            android:name=".ui.water.WaterAlarmActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.WellnesApp" />
     </application>
 
 </manifest>

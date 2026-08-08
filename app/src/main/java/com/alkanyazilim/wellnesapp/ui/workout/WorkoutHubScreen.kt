@@ -15,12 +15,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 
 private enum class ExerciseCategory(val label: String, val accent: Color) {
-    KOSU("Koşu", Color(0xFF7E57C2)),
-    KARDIYO("Kardiyo", Color(0xFFFF7043)),
-    GUC("Güç", Color(0xFFE53935)),
-    ESNEME("Esneme", Color(0xFF26A69A))
+    KOSU("Koşu", AppColors.ExerciseCardio),
+    KARDIYO("Kardiyo", AppColors.ExerciseCardio),
+    GUC("Güç", AppColors.ExerciseStrength),
+    ESNEME("Esneme", AppColors.ExerciseStretch)
 }
 
 @Composable
@@ -28,7 +29,11 @@ fun WorkoutHubScreen(navController: NavHostController, modifier: Modifier = Modi
     var selectedTab by remember { mutableStateOf(0) }
     val categories = ExerciseCategory.values()
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(AppColors.Background)
+    ) {
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -38,7 +43,10 @@ fun WorkoutHubScreen(navController: NavHostController, modifier: Modifier = Modi
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 16.dp, top = 16.dp, bottom = 16.dp)
-                    .background(Color(0xFFF0F0F5), shape = RoundedCornerShape(50))
+                    .background(
+                        AppColors.TextPrimary.copy(alpha = 0.06f),
+                        shape = RoundedCornerShape(50)
+                    )
                     .padding(4.dp)
             ) {
                 categories.forEachIndexed { index, category ->
@@ -47,14 +55,16 @@ fun WorkoutHubScreen(navController: NavHostController, modifier: Modifier = Modi
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(50))
-                            .background(if (selected) category.accent else Color.Transparent)
+                            .background(
+                                if (selected) category.accent else Color.Transparent
+                            )
                             .clickable { selectedTab = index }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = category.label,
-                            color = if (selected) Color.White else Color.Gray,
+                            color = if (selected) Color.White else AppColors.TextSecondary,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -67,19 +77,36 @@ fun WorkoutHubScreen(navController: NavHostController, modifier: Modifier = Modi
                     onClick = { navController.navigate("run_history") },
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
-                    Icon(Icons.Filled.History, contentDescription = "Koşu geçmişi")
+                    Icon(
+                        Icons.Filled.History,
+                        contentDescription = "Koşu geçmişi",
+                        tint = AppColors.TextSecondary
+                    )
                 }
             } else {
                 Spacer(modifier = Modifier.width(48.dp))
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.Background)
+        ) {
             when (categories[selectedTab]) {
                 ExerciseCategory.KOSU -> RunScreen()
-                ExerciseCategory.KARDIYO -> CustomExerciseScreen(categoryLabel = "Kardiyo")
-                ExerciseCategory.GUC -> CustomExerciseScreen(categoryLabel = "Güç")
-                ExerciseCategory.ESNEME -> CustomExerciseScreen(categoryLabel = "Esneme")
+                ExerciseCategory.KARDIYO -> CustomExerciseScreen(
+                    categoryLabel = "Kardiyo",
+                    accentColor = AppColors.ExerciseCardio
+                )
+                ExerciseCategory.GUC -> CustomExerciseScreen(
+                    categoryLabel = "Güç",
+                    accentColor = AppColors.ExerciseStrength
+                )
+                ExerciseCategory.ESNEME -> CustomExerciseScreen(
+                    categoryLabel = "Esneme",
+                    accentColor = AppColors.ExerciseStretch
+                )
             }
         }
     }

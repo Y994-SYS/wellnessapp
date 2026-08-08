@@ -19,6 +19,7 @@ class WaterDataStore(private val context: Context) {
         val REMINDER_INTERVAL_MIN = intPreferencesKey("reminder_interval_minutes")
         val REMINDER_START_HOUR = intPreferencesKey("reminder_start_hour")
         val REMINDER_END_HOUR = intPreferencesKey("reminder_end_hour")
+        val REMINDER_SOUND_ENABLED = booleanPreferencesKey("reminder_sound_enabled")
 
         private fun consumedKeyFor(date: String) = intPreferencesKey("consumed_$date")
     }
@@ -33,6 +34,7 @@ class WaterDataStore(private val context: Context) {
     val reminderIntervalMin: Flow<Int> = context.waterDataStore.data.map { it[REMINDER_INTERVAL_MIN] ?: 120 }
     val reminderStartHour: Flow<Int> = context.waterDataStore.data.map { it[REMINDER_START_HOUR] ?: 9 }
     val reminderEndHour: Flow<Int> = context.waterDataStore.data.map { it[REMINDER_END_HOUR] ?: 22 }
+    val soundEnabled: Flow<Boolean> = context.waterDataStore.data.map { it[REMINDER_SOUND_ENABLED] ?: true }
 
     suspend fun setDailyGoal(ml: Int) = context.waterDataStore.edit { it[DAILY_GOAL_ML] = ml }
     suspend fun setGlassSize(ml: Int) = context.waterDataStore.edit { it[GLASS_SIZE_ML] = ml }
@@ -45,12 +47,19 @@ class WaterDataStore(private val context: Context) {
         }
     }
 
-    suspend fun setReminderSettings(enabled: Boolean, intervalMin: Int, startHour: Int, endHour: Int) {
+    suspend fun setReminderSettings(
+        enabled: Boolean,
+        intervalMin: Int,
+        startHour: Int,
+        endHour: Int,
+        soundEnabled: Boolean
+    ) {
         context.waterDataStore.edit {
             it[REMINDER_ENABLED] = enabled
             it[REMINDER_INTERVAL_MIN] = intervalMin
             it[REMINDER_START_HOUR] = startHour
             it[REMINDER_END_HOUR] = endHour
+            it[REMINDER_SOUND_ENABLED] = soundEnabled
         }
     }
 }
