@@ -20,14 +20,22 @@ object AlarmScheduler {
             add(Calendar.MINUTE, intervalMinutes)
         }
 
-        // Aktif saat aralığı dışına düşerse, ertesi günün başlangıç saatine ayarla
+        // Aktif saat aralığı dışına düşerse, başlangıç saatine ayarla
         val nextHour = next.get(Calendar.HOUR_OF_DAY)
         if (nextHour !in startHour until endHour) {
             next = (now.clone() as Calendar).apply {
-                if (nextHour >= endHour) add(Calendar.DAY_OF_YEAR, 1)
                 set(Calendar.HOUR_OF_DAY, startHour)
                 set(Calendar.MINUTE, 0)
                 set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            // KRİTİK DÜZELTME: Saat değerine (nextHour >= endHour) bakmak yerine
+            // gerçek zaman karşılaştırması yapıyoruz. Eski kod, gece yarısını
+            // aşan durumlarda (örn. 22:00 + 2 saat = 00:00) günü artırmıyordu,
+            // bu da geçmiş bir zaman için alarm kurulmasına ve sistemin alarmı
+            // anında tekrar tekrar tetiklemesine (sonsuz döngü hissi) yol açıyordu.
+            if (!next.after(now)) {
+                next.add(Calendar.DAY_OF_YEAR, 1)
             }
         }
 

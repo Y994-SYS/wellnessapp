@@ -96,7 +96,13 @@ class RunTrackingService : Service(), SensorEventListener {
         timerJob = serviceScope.launch {
             while (true) {
                 delay(1000)
-                RunSessionState.update { it.copy(elapsedSeconds = it.elapsedSeconds + 1) }
+                // NOT: Bu sayaç yalnızca CANLI EKRAN GÖSTERİMİ içindir.
+                // Doze modu / CPU uykusu sırasında delay(1000) tam 1 saniyede
+                // tetiklenmeyebilir, bu yüzden bu sayaç gerçek geçen süreden
+                // az sayabilir. Kalıcı kayıt (saveSessionToHistory) bu sayaca
+                // DEĞİL, gerçek saat farkına (wall-clock) göre hesaplanır.
+                val realElapsed = ((System.currentTimeMillis() - sessionStartMillis) / 1000).toInt()
+                RunSessionState.update { it.copy(elapsedSeconds = realElapsed) }
                 val current = RunSessionState.data.value
                 updateNotification(current.sessionSteps, current.targetSteps)
             }
@@ -114,16 +120,24 @@ class RunTrackingService : Service(), SensorEventListener {
 
     private fun saveSessionToHistory() {
         val current = RunSessionState.data.value
-        // Sadece en az birkaç saniye süren ve içinde anlamlı veri olan oturumları kaydet
-        if (current.elapsedSeconds < 3) return
-
         val endMillis = System.currentTimeMillis()
+
+        // KRİTİK DÜZELTME: Süreyi tik sayacından (current.elapsedSeconds) değil,
+        // gerçek başlangıç/bitiş saat farkından hesaplıyoruz. Tik sayacı, Doze
+        // modu / arka plan CPU kısıtlamaları yüzünden gecikebilir ve gerçek
+        // süreden birkaç dakika az gösterebilirdi. Wall-clock farkı bu duruma
+        // bağışıktır ve her zaman doğru sonucu verir.
+        val realDurationSeconds = ((endMillis - sessionStartMillis) / 1000).toInt()
+
+        // Sadece en az birkaç saniye süren ve içinde anlamlı veri olan oturumları kaydet
+        if (realDurationSeconds < 3) return
+
         val session = RunSessionEntity(
             startTimeMillis = sessionStartMillis,
             endTimeMillis = endMillis,
             steps = current.sessionSteps,
             targetSteps = current.targetSteps,
-            durationSeconds = current.elapsedSeconds
+            durationSeconds = realDurationSeconds
         )
         // Servis kapanmadan önce senkron şekilde kaydediyoruz (runBlocking kısa ömürlü, güvenli)
         runBlocking {

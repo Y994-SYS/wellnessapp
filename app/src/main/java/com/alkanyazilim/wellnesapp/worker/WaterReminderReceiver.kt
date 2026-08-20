@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.alkanyazilim.wellnesapp.MainActivity
@@ -17,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class WaterReminderReceiver : BroadcastReceiver() {
 
@@ -64,19 +66,19 @@ class WaterReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Normal bildirim sesi (alarm DEĞİL)
-        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
         val notification = NotificationCompat.Builder(context, CHANNEL_ID_SOUND)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Su içme zamanı! 💧")
             .setContentText("Hedefine ulaşmak için bir bardak su içmeyi unutma.")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)   // alarm değil, hatırlatma
-            .setSound(soundUri)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
+        // NOT: .setSound() burada kasıtlı olarak kullanılmıyor. Android O+ üzerinde
+        // bildirim sesi NotificationChannel'a bağlıdır ve kanal oluşturulduktan
+        // sonra .setSound() ile değiştirilemez. Ses seçimi createSoundChannel()
+        // içinde, kanal her tetiklemede silinip yeniden oluşturulurken yapılıyor.
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
@@ -95,16 +97,30 @@ class WaterReminderReceiver : BroadcastReceiver() {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
 
+            val soundUri = getSelectedSoundUri(context)
+
             val channel = NotificationChannel(
                 CHANNEL_ID_SOUND,
                 "Su İçme Hatırlatıcı (Sesli)",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Su içme hatırlatıcı bildirimleri (sesli)"
-                setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), audioAttributes)
+                setSound(soundUri, audioAttributes)
                 enableVibration(true)
             }
             manager.createNotificationChannel(channel)
+        }
+    }
+
+    // YENİ: Kullanıcının ayarlar ekranında seçtiği zil sesini döndürür.
+    // Seçim yapılmadıysa (boş string) sistem varsayılan bildirim sesine düşer.
+    private fun getSelectedSoundUri(context: Context): Uri {
+        val store = WaterDataStore(context)
+        val savedUriString = runBlocking { store.reminderSoundUri.first() }
+        return if (savedUriString.isNotBlank()) {
+            Uri.parse(savedUriString)
+        } else {
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         }
     }
 

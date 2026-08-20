@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
@@ -37,6 +40,7 @@ import androidx.navigation.NavHostController
 import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
 import com.alkanyazilim.wellnesapp.ui.Screen
 import com.alkanyazilim.wellnesapp.ui.theme.AppColors
+import com.alkanyazilim.wellnesapp.ui.util.rememberCurrentLocale
 import kotlin.math.ceil
 import androidx.compose.foundation.background
 @Composable
@@ -49,6 +53,10 @@ fun WaterScreen(navController: NavHostController) {
     val consumed by viewModel.consumedToday.collectAsState()
     val glass by viewModel.glassSize.collectAsState()
     val targetProgress = (consumed.toFloat() / goal).coerceIn(0f, 1f)
+
+    val weeklyTotal by viewModel.weeklyTotal.collectAsState()
+    val monthlyTotal by viewModel.monthlyTotal.collectAsState()
+    val yearlyTotal by viewModel.yearlyTotal.collectAsState()
 
     val animatedProgress by animateFloatAsState(
         targetValue = targetProgress,
@@ -104,7 +112,8 @@ fun WaterScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp)
-                .background(AppColors.Background),
+                .background(AppColors.Background)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -181,7 +190,98 @@ fun WaterScreen(navController: NavHostController) {
                     Icon(Icons.Default.Add, contentDescription = "Ekle")
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            WaterStatsCard(
+                weeklyMl = weeklyTotal,
+                monthlyMl = monthlyTotal,
+                yearlyMl = yearlyTotal
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+private fun WaterStatsCard(weeklyMl: Int, monthlyMl: Int, yearlyMl: Int) {
+    val locale = rememberCurrentLocale()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.BarChart,
+                    contentDescription = null,
+                    tint = AppColors.WaterAccent,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "İstatistikler",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextPrimary
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                WaterStatItem(
+                    label = "Haftalık",
+                    totalMl = weeklyMl,
+                    dayCount = 7,
+                    locale = locale
+                )
+                WaterStatItem(
+                    label = "Aylık",
+                    totalMl = monthlyMl,
+                    dayCount = java.time.LocalDate.now().lengthOfMonth(),
+                    locale = locale
+                )
+                WaterStatItem(
+                    label = "Yıllık",
+                    totalMl = yearlyMl,
+                    dayCount = if (java.time.LocalDate.now().isLeapYear) 366 else 365,
+                    locale = locale
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaterStatItem(label: String, totalMl: Int, dayCount: Int, locale: java.util.Locale) {
+    val totalLiters = totalMl / 1000f
+    val dailyAverageMl = if (dayCount > 0) totalMl / dayCount else 0
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.TextSecondary
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            String.format(locale, "%.1f L", totalLiters),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.WaterAccent
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "günlük ort. $dailyAverageMl ml",
+            style = MaterialTheme.typography.labelSmall,
+            color = AppColors.TextSecondary
+        )
     }
 }
 

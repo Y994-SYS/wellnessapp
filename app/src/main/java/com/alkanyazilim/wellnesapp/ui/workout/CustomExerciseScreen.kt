@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alkanyazilim.wellnesapp.data.model.ExerciseTemplate
+import com.alkanyazilim.wellnesapp.data.model.VoiceCue
 import com.alkanyazilim.wellnesapp.data.model.templatesForCategory
 import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlinx.coroutines.delay
@@ -57,6 +58,12 @@ fun CustomExerciseScreen(
     var selectedPoseOrdinal by rememberSaveable(categoryLabel) { mutableStateOf(-1) }
     var selectedInstructions by rememberSaveable(categoryLabel) { mutableStateOf(listOf<String>()) }
 
+    // YENİ: Seçili şablonun sesli koçluk verisi. VoiceCue Parcelable olmadığı için
+    // rememberSaveable yerine remember kullanılıyor (tts değişkeniyle aynı yaklaşım) —
+    // konfigürasyon değişiminde kaybolur ama aktif oturum sırasında sorun yaratmaz.
+    var selectedCycleSeconds by remember(categoryLabel) { mutableStateOf(3.0) }
+    var selectedVoiceCues by remember(categoryLabel) { mutableStateOf(listOf<VoiceCue>()) }
+
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
 
     DisposableEffect(Unit) {
@@ -72,8 +79,15 @@ fun CustomExerciseScreen(
         }
     }
 
+    // Önemli sistem anonsları (başlama, bitiş, set geçişi): önceki sözü keser, hemen konuşur.
     fun speak(text: String) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+    }
+
+    // YENİ: Sesli koçluk komutları (hareket talimatları): sıraya eklenir, birbirini
+    // kesmez. Hızlı tempolu hareketlerde art arda net bir şekilde duyulmasını sağlar.
+    fun speakQueued(text: String) {
+        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, null)
     }
 
     LaunchedEffect(sessionState, remainingSeconds) {
@@ -106,6 +120,55 @@ fun CustomExerciseScreen(
         }
     }
 
+    // YENİ: Sesli koçluk motoru.
+    // Şablonda voiceCues tanımlıysa, egzersiz aktifken hareketin doğru zamanlamasıyla
+    // adım adım komut verir (örn. "Aşağı in... Tut... Kalk").
+    //   - Süreli modda: toplam süre boyunca döngü kendini tekrarlar (jumping jack gibi
+    //     hızlı hareketlerde kısa döngü, plank gibi duruşlarda uzun bir hatırlatma döngüsü).
+    //   - Set bazlı modda: döngü, set başına tekrar sayısı kadar çalışır ve her tekrar
+    //     başında "3. tekrar: Aşağı in" gibi sayıyı da söyler.
+    // Bu efekt (sessionState, currentSet, mode) değiştiğinde otomatik olarak iptal edilip
+    // yeniden başlar — bu yüzden Durdur/Bitir gibi durumlarda ekstra bir "durdurma" koduna
+    // gerek yok, yapısal eşzamanlılık (structured concurrency) bunu kendiliğinden halleder.
+    // Not: TTS'in gerçek konuşma süresi ile hedeflenen zamanlama arasında küçük sapmalar
+    // olabilir — bu bir metronom değil, yaklaşık bir sesli koçtur.
+    LaunchedEffect(sessionState, currentSet, mode) {
+        if (sessionState != SessionState.ACTIVE) return@LaunchedEffect
+        if (selectedVoiceCues.isEmpty()) return@LaunchedEffect
+
+        val cycleMillis = (selectedCycleSeconds * 1000).toLong().coerceAtLeast(300L)
+        val sortedCues = selectedVoiceCues.sortedBy { it.atPercent }
+
+        val cycleLimitMillis = when (mode) {
+            ExerciseMode.SURELI -> durationSeconds.toLong() * 1000L
+            ExerciseMode.SET_BAZLI -> repsPerSet.toLong() * cycleMillis
+        }
+        if (cycleLimitMillis <= 0L) return@LaunchedEffect
+
+        val startElapsed = System.currentTimeMillis()
+        var cycleIndex = 0
+
+        while (true) {
+            val cycleStart = cycleIndex * cycleMillis
+            if (cycleStart >= cycleLimitMillis) break
+
+            for (cue in sortedCues) {
+                val targetElapsed = cycleStart + (cue.atPercent * cycleMillis).toLong()
+                val now = System.currentTimeMillis() - startElapsed
+                val waitMs = targetElapsed - now
+                if (waitMs > 0) delay(waitMs)
+
+                val text = if (mode == ExerciseMode.SET_BAZLI && cue.atPercent <= 0f) {
+                    "${cycleIndex + 1}. tekrar: ${cue.text}"
+                } else {
+                    cue.text
+                }
+                speakQueued(text)
+            }
+            cycleIndex++
+        }
+    }
+
     when (sessionState) {
         SessionState.FORM -> ExerciseForm(
             categoryLabel = categoryLabel,
@@ -131,6 +194,8 @@ fun CustomExerciseScreen(
                 repsPerSet = template.defaultReps
                 selectedPoseOrdinal = template.pose.ordinal
                 selectedInstructions = template.instructions
+                selectedCycleSeconds = template.cycleSeconds
+                selectedVoiceCues = template.voiceCues
             },
             onStart = {
                 currentSet = 1
@@ -155,6 +220,7 @@ fun CustomExerciseScreen(
             currentSet = currentSet,
             totalSets = totalSets,
             repsPerSet = repsPerSet,
+            hasVoiceCoaching = selectedVoiceCues.isNotEmpty(),
             onSetComplete = {
                 if (currentSet < totalSets) {
                     speak("Set $currentSet tamamlandı, dinlenme zamanı")
@@ -537,6 +603,7 @@ private fun ActiveExerciseView(
     currentSet: Int,
     totalSets: Int,
     repsPerSet: Int,
+    hasVoiceCoaching: Boolean,
     onSetComplete: () -> Unit,
     onStop: () -> Unit
 ) {
@@ -558,6 +625,20 @@ private fun ActiveExerciseView(
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary
             )
+
+            if (hasVoiceCoaching) {
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🔊", fontSize = 14.sp)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Sesli koçluk açık",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = accentColor
+                    )
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
 
             if (mode == ExerciseMode.SURELI) {

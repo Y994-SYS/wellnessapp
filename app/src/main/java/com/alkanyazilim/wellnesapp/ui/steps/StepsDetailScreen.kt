@@ -22,9 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alkanyazilim.wellnesapp.data.repository.HealthConnectManager
+import com.alkanyazilim.wellnesapp.ui.util.rememberCurrentLocale
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private const val DAILY_GOAL = 6500L
 
@@ -38,7 +38,14 @@ private val calorieFacts = listOf(
     CalorieFact("🥐", "kruvasan", 230.0, "adet"),
     CalorieFact("🍩", "donut", 195.0, "adet"),
     CalorieFact("🍌", "muz", 105.0, "adet"),
-    CalorieFact("🍫", "çikolata parçası", 150.0, "adet")
+    CalorieFact("🍫", "çikolata parçası", 150.0, "adet"),
+    // Türk mutfağından karşılaştırmalar
+    CalorieFact("🫓", "lahmacun", 250.0, "adet"),
+    CalorieFact("🥙", "kıymalı pide", 650.0, "adet"),
+    CalorieFact("🍢", "Adana kebap", 600.0, "porsiyon"),
+    CalorieFact("🍯", "baklava", 300.0, "dilim"),
+    CalorieFact("🥯", "simit", 300.0, "adet"),
+    CalorieFact("🧀", "künefe", 400.0, "porsiyon")
 )
 
 private sealed class DistanceFact {
@@ -53,13 +60,18 @@ private val distanceFacts = listOf(
     DistanceFact.Climb("🏙️", "New York'taki Empire State Building'in tepesine", 443.0),
     DistanceFact.Loop("🏛️", "Mısır piramitlerinin çevresinde", 3.6),
     DistanceFact.Loop("⚽", "bir futbol sahasının çevresinde", 0.338),
-    DistanceFact.Loop("🏃", "bir atletizm pistinde (400m)", 0.4)
+    DistanceFact.Loop("🏃", "bir atletizm pistinde (400m)", 0.4),
+    // İstanbul'dan karşılaştırmalar
+    DistanceFact.Climb("🗼", "İstanbul'daki Çamlıca Kulesi'nin zirvesine", 369.0),
+    DistanceFact.Climb("🏯", "İstanbul'daki Galata Kulesi'nin tepesine", 67.0),
+    DistanceFact.Loop("🌉", "15 Temmuz Şehitler Köprüsü'nü", 1.56)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StepsDetailScreen(dateString: String, onBack: () -> Unit) {
     val context = LocalContext.current
+    val locale = rememberCurrentLocale()
     val date = LocalDate.parse(dateString)
     val healthConnectManager = remember { HealthConnectManager(context) }
 
@@ -126,8 +138,8 @@ fun StepsDetailScreen(dateString: String, onBack: () -> Unit) {
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 DetailStat("Hedef", "$DAILY_GOAL")
-                DetailStat("Mesafe", String.format(Locale.getDefault(), "%.2f km", distanceKm))
-                DetailStat("Yakılan", String.format(Locale.getDefault(), "%.0f kcal", calories))
+                DetailStat("Mesafe", String.format(locale, "%.2f km", distanceKm))
+                DetailStat("Yakılan", String.format(locale, "%.0f kcal", calories))
             }
 
             Spacer(Modifier.height(24.dp))
@@ -136,8 +148,8 @@ fun StepsDetailScreen(dateString: String, onBack: () -> Unit) {
             FunFactCard(
                 emoji = calorieFact.emoji,
                 title = "Yakılan toplam kalori",
-                value = String.format(Locale.getDefault(), "%.0f kcal", calories),
-                subtitle = "≈${String.format(Locale.getDefault(), "%.2f", calorieUnits)} ${calorieFact.unitLabel} ${calorieFact.name}",
+                value = String.format(locale, "%.0f kcal", calories),
+                subtitle = "≈${String.format(locale, "%.2f", calorieUnits)} ${calorieFact.unitLabel} ${calorieFact.name}",
                 backgroundColor = Color(0xFFF3D9C4)
             )
 
@@ -146,18 +158,18 @@ fun StepsDetailScreen(dateString: String, onBack: () -> Unit) {
             val distanceSubtitle = when (distanceFact) {
                 is DistanceFact.Climb -> {
                     val times = (distanceKm * 1000) / distanceFact.heightM
-                    "≈Mesafe, ${distanceFact.name} ${String.format(Locale.getDefault(), "%.2f", times)} kez tırmanmaya eşit"
+                    "≈Mesafe, ${distanceFact.name} ${String.format(locale, "%.2f", times)} kez tırmanmaya eşit"
                 }
                 is DistanceFact.Loop -> {
                     val laps = distanceKm / distanceFact.loopKm
-                    "≈${distanceFact.name} ${String.format(Locale.getDefault(), "%.2f", laps)} tur attınız"
+                    "≈${distanceFact.name} ${String.format(locale, "%.2f", laps)} tur attınız"
                 }
             }
 
             FunFactCard(
                 emoji = distanceFact.emoji,
                 title = "Toplam mesafe",
-                value = String.format(Locale.getDefault(), "%.2f km", distanceKm),
+                value = String.format(locale, "%.2f km", distanceKm),
                 subtitle = distanceSubtitle,
                 backgroundColor = Color(0xFFD6E4EE)
             )

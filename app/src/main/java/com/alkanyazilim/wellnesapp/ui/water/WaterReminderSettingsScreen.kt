@@ -2,6 +2,12 @@
 
 package com.alkanyazilim.wellnesapp.ui.water
 
+import android.app.Activity
+import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,12 +44,42 @@ fun WaterReminderSettingsScreen(onBack: () -> Unit) {
     val startHour by viewModel.reminderStartHour.collectAsState()
     val endHour by viewModel.reminderEndHour.collectAsState()
     val soundEnabled by viewModel.reminderSoundEnabled.collectAsState()
+    val soundUri by viewModel.reminderSoundUri.collectAsState()
 
     var localEnabled by remember(enabled) { mutableStateOf(enabled) }
     var localInterval by remember(interval) { mutableStateOf(interval) }
     var localStartHour by remember(startHour) { mutableStateOf(startHour) }
     var localEndHour by remember(endHour) { mutableStateOf(endHour) }
     var localSoundEnabled by remember(soundEnabled) { mutableStateOf(soundEnabled) }
+    var localSoundUri by remember(soundUri) { mutableStateOf(soundUri) }
+
+    val ringtonePickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            localSoundUri = uri?.toString() ?: ""
+        }
+    }
+
+    fun openRingtonePicker() {
+        val currentUri = if (localSoundUri.isNotBlank()) {
+            Uri.parse(localSoundUri)
+        } else {
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        }
+        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Bildirim Sesi Seç")
+            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, currentUri)
+            putExtra(
+                RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI,
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            )
+        }
+        ringtonePickerLauncher.launch(intent)
+    }
 
     Scaffold(
         topBar = {
@@ -90,6 +126,22 @@ fun WaterReminderSettingsScreen(onBack: () -> Unit) {
                 Switch(checked = localSoundEnabled, onCheckedChange = { localSoundEnabled = it })
             }
 
+            if (localSoundEnabled) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { openRingtonePicker() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val currentLabel = if (localSoundUri.isBlank()) {
+                        "Varsayılan"
+                    } else {
+                        RingtoneManager.getRingtone(context, Uri.parse(localSoundUri))
+                            ?.getTitle(context) ?: "Seçili ses"
+                    }
+                    Text("Zil Sesi: $currentLabel")
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Text("Sıklık", style = MaterialTheme.typography.titleSmall)
@@ -125,7 +177,8 @@ fun WaterReminderSettingsScreen(onBack: () -> Unit) {
                         intervalMin = localInterval,
                         startHour = localStartHour,
                         endHour = localEndHour,
-                        soundEnabled = localSoundEnabled
+                        soundEnabled = localSoundEnabled,
+                        soundUri = localSoundUri
                     )
                     onBack()
                 },
