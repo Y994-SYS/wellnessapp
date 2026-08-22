@@ -23,9 +23,15 @@ import kotlinx.coroutines.runBlocking
 class WaterReminderReceiver : BroadcastReceiver() {
 
     companion object {
-        // Farklı kanal ID'leri: biri sessiz, biri sesli
         const val CHANNEL_ID_SILENT = "water_reminder_channel_silent"
-        const val CHANNEL_ID_SOUND = "water_reminder_channel_sound"
+        // NOT: Bu artık sabit bir kanal ID'si DEĞİL, bir ÖN EK (prefix).
+        // Gerçek kanal ID'si, seçilen ses URI'sine göre dinamik üretilir
+        // (bkz. soundChannelId()). Böylece kullanıcı farklı bir ses seçtiğinde
+        // Android'in eski kanalı "sil + yeniden oluştur" ile güncellemesine güvenmek
+        // yerine, doğrudan hiç dokunulmamış YENİ bir kanal kullanılır. Bazı Android
+        // sürümlerinde/cihazlarında sil+yeniden oluştur güvenilir çalışmıyor ve eski
+        // ses "yapışık" kalabiliyor — bu yaklaşım o sorunu kökten ortadan kaldırır.
+        const val CHANNEL_ID_SOUND_PREFIX = "water_reminder_channel_sound_"
         const val NOTIFICATION_ID = 2001
     }
 
@@ -35,14 +41,12 @@ class WaterReminderReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             val soundEnabled = store.soundEnabled.first()
 
-            // Sesli veya sessiz bildirimi göster
             if (soundEnabled) {
                 showNotification(context)
             } else {
                 showSilentNotification(context)
             }
 
-            // Bir sonraki alarmı zamanla
             val interval = store.reminderIntervalMin.first()
             val start = store.reminderStartHour.first()
             val end = store.reminderEndHour.first()
@@ -55,7 +59,10 @@ class WaterReminderReceiver : BroadcastReceiver() {
 
     // ---------- SESLİ BİLDİRİM ----------
     private fun showNotification(context: Context) {
-        createSoundChannel(context)
+        val soundUri = getSelectedSoundUri(context)
+        val channelId = soundChannelId(soundUri)
+
+        createSoundChannel(context, channelId, soundUri)
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -66,41 +73,47 @@ class WaterReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID_SOUND)
+        val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Su içme zamanı! 💧")
             .setContentText("Hedefine ulaşmak için bir bardak su içmeyi unutma.")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)   // alarm değil, hatırlatma
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
-        // NOT: .setSound() burada kasıtlı olarak kullanılmıyor. Android O+ üzerinde
-        // bildirim sesi NotificationChannel'a bağlıdır ve kanal oluşturulduktan
-        // sonra .setSound() ile değiştirilemez. Ses seçimi createSoundChannel()
-        // içinde, kanal her tetiklemede silinip yeniden oluşturulurken yapılıyor.
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun createSoundChannel(context: Context) {
+    // Seçilen ses URI'sine özgü, benzersiz bir kanal ID'si üretir.
+    // Aynı ses için her zaman aynı ID döner (gereksiz kanal çoğalmasını önler),
+    // ama farklı bir ses seçildiğinde otomatik olarak yepyeni bir ID üretir.
+    private fun soundChannelId(soundUri: Uri): String {
+        return "$CHANNEL_ID_SOUND_PREFIX${soundUri.toString().hashCode()}"
+    }
+
+    private fun createSoundChannel(context: Context, channelId: String, soundUri: Uri) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // Eski kanalı (varsa) sil – böylece yeni ses ayarları uygulanır
-            manager.deleteNotificationChannel("water_reminder_channel")   // eski yanlış kanal
-            manager.deleteNotificationChannel(CHANNEL_ID_SOUND)          // aynı isimle varsa
+            // Eski, artık kullanılmayan sabit kanal adını temizle (geçmiş sürümlerden kalan)
+            manager.deleteNotificationChannel("water_reminder_channel")
+
+            // Bu ses için kanal zaten oluşturulmuşsa tekrar oluşturmaya gerek yok
+            if (manager.getNotificationChannel(channelId) != null) {
+                cleanupOldSoundChannels(manager, keepChannelId = channelId)
+                return
+            }
 
             val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)    // alarm DEĞİL
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
 
-            val soundUri = getSelectedSoundUri(context)
-
             val channel = NotificationChannel(
-                CHANNEL_ID_SOUND,
+                channelId,
                 "Su İçme Hatırlatıcı (Sesli)",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
@@ -109,10 +122,21 @@ class WaterReminderReceiver : BroadcastReceiver() {
                 enableVibration(true)
             }
             manager.createNotificationChannel(channel)
+
+            // Artık kullanılmayan eski ses kanallarını temizle (sistem ayarlarında
+            // birikmesini önlemek için — işlevsel bir zorunluluk değil, düzen amaçlı)
+            cleanupOldSoundChannels(manager, keepChannelId = channelId)
         }
     }
 
-    // YENİ: Kullanıcının ayarlar ekranında seçtiği zil sesini döndürür.
+    private fun cleanupOldSoundChannels(manager: NotificationManager, keepChannelId: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        manager.notificationChannels
+            .filter { it.id.startsWith(CHANNEL_ID_SOUND_PREFIX) && it.id != keepChannelId }
+            .forEach { manager.deleteNotificationChannel(it.id) }
+    }
+
+    // Kullanıcının ayarlar ekranında seçtiği zil sesini döndürür.
     // Seçim yapılmadıysa (boş string) sistem varsayılan bildirim sesine düşer.
     private fun getSelectedSoundUri(context: Context): Uri {
         val store = WaterDataStore(context)
@@ -155,9 +179,9 @@ class WaterReminderReceiver : BroadcastReceiver() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // Eski kanalları temizle
+            if (manager.getNotificationChannel(CHANNEL_ID_SILENT) != null) return
+
             manager.deleteNotificationChannel("water_reminder_channel")
-            manager.deleteNotificationChannel(CHANNEL_ID_SILENT)
 
             val channel = NotificationChannel(
                 CHANNEL_ID_SILENT,

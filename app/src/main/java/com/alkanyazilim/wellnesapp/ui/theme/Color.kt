@@ -17,7 +17,7 @@ val Pink80 = Color(0xFFFFB4C0)
 val Pink40 = Color(0xFFE85D75)
 
 // Açık tema için özel yüzey/arka plan tonları (kartların belirginleşmesi için)
-val LightBackground = Color(0xFFF6F3FB)
+val LightBackground = Color(0xFF92E7F3)
 val LightSurface = Color(0xFFFFFFFF)
 val LightSurfaceVariant = Color(0xFFEDE6F7)
 val LightPrimaryContainer = Color(0xFFEADDFF)

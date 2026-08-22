@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -233,25 +234,28 @@ private fun WaterStatsCard(weeklyMl: Int, monthlyMl: Int, yearlyMl: Int) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 WaterStatItem(
                     label = "Haftalık",
                     totalMl = weeklyMl,
                     dayCount = 7,
-                    locale = locale
+                    locale = locale,
+                    modifier = Modifier.weight(1f)
                 )
                 WaterStatItem(
                     label = "Aylık",
                     totalMl = monthlyMl,
                     dayCount = java.time.LocalDate.now().lengthOfMonth(),
-                    locale = locale
+                    locale = locale,
+                    modifier = Modifier.weight(1f)
                 )
                 WaterStatItem(
                     label = "Yıllık",
                     totalMl = yearlyMl,
                     dayCount = if (java.time.LocalDate.now().isLeapYear) 366 else 365,
-                    locale = locale
+                    locale = locale,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -259,28 +263,48 @@ private fun WaterStatsCard(weeklyMl: Int, monthlyMl: Int, yearlyMl: Int) {
 }
 
 @Composable
-private fun WaterStatItem(label: String, totalMl: Int, dayCount: Int, locale: java.util.Locale) {
+private fun WaterStatItem(
+    label: String,
+    totalMl: Int,
+    dayCount: Int,
+    locale: java.util.Locale,
+    modifier: Modifier = Modifier
+) {
     val totalLiters = totalMl / 1000f
     val dailyAverageMl = if (dayCount > 0) totalMl / dayCount else 0
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
             label,
             style = MaterialTheme.typography.bodySmall,
-            color = AppColors.TextSecondary
+            color = AppColors.TextSecondary,
+            maxLines = 1
         )
         Spacer(Modifier.height(4.dp))
         Text(
             String.format(locale, "%.1f L", totalLiters),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = AppColors.WaterAccent
+            color = AppColors.WaterAccent,
+            maxLines = 1
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
-            "günlük ort. $dailyAverageMl ml",
+            "günlük ort.",
             style = MaterialTheme.typography.labelSmall,
-            color = AppColors.TextSecondary
+            color = AppColors.TextSecondary,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+        Text(
+            "$dailyAverageMl ml",
+            style = MaterialTheme.typography.labelSmall,
+            color = AppColors.TextSecondary,
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
     }
 }
