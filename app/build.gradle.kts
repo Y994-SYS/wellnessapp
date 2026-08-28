@@ -39,6 +39,13 @@ android {
     }
 }
 
+// YENİ — Room şema geçmişini app/schemas/ altına JSON olarak dışa aktarır.
+// KSP kullandığımız için bu ayar android{} bloğunun İÇİNE değil, ayrı bir
+// ksp{} bloğuna yazılıyor (kapt kullansaydık javaCompileOptions içinde olurdu).
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

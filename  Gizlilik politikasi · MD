@@ -1,0 +1,101 @@
+# WellnesApp Gizlilik Politikası
+
+**Son güncelleme:** [TARİH GİRİN]
+
+Bu Gizlilik Politikası, WellnesApp mobil uygulamasının ("Uygulama", "WellnesApp") kişisel verilerinizi nasıl işlediğini açıklar. Uygulamayı kullanarak bu politikayı kabul etmiş olursunuz.
+
+---
+
+## 1. Kısa Özet
+
+WellnesApp'i tasarlarken temel ilkemiz şu oldu: **verileriniz cihazınızda kalır.** Uygulama herhangi bir sunucuya bağlanmaz, hesap oluşturmanızı istemez, reklam göstermez ve verilerinizi üçüncü taraflarla paylaşmaz. Aşağıda bunun ayrıntılarını bulabilirsiniz.
+
+---
+
+## 2. Topladığımız Veriler ve Nasıl Saklandığı
+
+WellnesApp aşağıdaki verileri **yalnızca cihazınızın yerel deposunda** (uygulama içi veritabanı ve tercihler dosyaları) saklar. Bu veriler hiçbir zaman bir sunucuya gönderilmez, bulutta yedeklenmez (cihazınızın kendi sistem yedekleme ayarları hariç) veya bizimle ya da başka bir üçüncü tarafla paylaşılmaz.
+
+| Veri türü | Ne için kullanılır | Nerede saklanır |
+|---|---|---|
+| Adım sayısı | Günlük adım hedefinizi takip etmek, mesafe ve kalori hesaplamak | Cihaz — Health Connect üzerinden okunur, uygulama içinde saklanmaz |
+| Su tüketim kayıtları | Günlük/haftalık/aylık/yıllık su takibi ve istatistikler | Cihaz — yerel veri deposu |
+| Görev ve alışkanlık kayıtları | Oluşturduğunuz görevlerin ve tamamlama durumlarının takibi | Cihaz — yerel veritabanı |
+| Koşu/egzersiz geçmişi | Süre, adım, hedef gibi antrenman kayıtları | Cihaz — yerel veritabanı |
+| Profil bilgileri (isim, kilo, boy, yaş) | Kalori hesaplama ve kişiselleştirme (örn. "Merhaba [isim]") | Cihaz — yerel tercihler deposu |
+| Tema ve hatırlatıcı ayarları | Uygulama deneyiminizi kişiselleştirmek | Cihaz — yerel tercihler deposu |
+
+Uygulamayı sildiğinizde (kaldırdığınızda) bu verilerin tamamı cihazınızdan otomatik olarak silinir.
+
+---
+
+## 3. Health Connect Entegrasyonu
+
+WellnesApp, günlük adım sayınızı okumak için Android'in **Health Connect** platformunu kullanır. Bu entegrasyonla ilgili önemli noktalar:
+
+- Uygulama Health Connect'ten yalnızca **adım verisi** okur; başka bir sağlık verisine (kalp atışı, uyku, beslenme vb.) erişmez.
+- Bu izni vermek tamamen isteğe bağlıdır; vermezseniz uygulamanın diğer özellikleri (su, görevler, manuel egzersiz takibi) normal şekilde çalışmaya devam eder.
+- Health Connect izinlerini istediğiniz zaman Android Ayarlar > Health Connect üzerinden gözden geçirebilir veya iptal edebilirsiniz.
+- Okunan adım verisi WellnesApp'in kendi veritabanında **saklanmaz**; her ekran açılışında Health Connect'ten anlık olarak okunur.
+
+---
+
+## 4. İzinler ve Neden İstendikleri
+
+| İzin | Amaç |
+|---|---|
+| Bildirimler (POST_NOTIFICATIONS) | Su hatırlatıcı ve koşu takibi bildirimlerini gösterebilmek için |
+| Tam Zamanlı Alarm (SCHEDULE_EXACT_ALARM) | Su hatırlatıcısının belirlediğiniz saatte tam zamanında tetiklenmesi için |
+| Health Connect (adım verisi) | Günlük adım sayınızı gösterebilmek için |
+| Ön Plan Servisi (Foreground Service) | Koşu takibini, ekran kapalıyken veya uygulama arka plandayken kesintisiz sürdürebilmek için |
+
+Uygulama; kişilerinize, konumunuza, kameranıza, mikrofonunuza, dosyalarınıza veya SMS'lerinize erişmez.
+
+---
+
+## 5. Metinden Sese (Text-to-Speech) Özelliği
+
+Egzersiz sırasında sesli koçluk özelliği, Android'in yerleşik metinden sese motorunu kullanır. Bu işlem tamamen cihazınızda gerçekleşir; okunan metinler herhangi bir sunucuya gönderilmez.
+
+---
+
+## 6. Üçüncü Taraflarla Veri Paylaşımı
+
+WellnesApp, verilerinizi **hiçbir üçüncü tarafla paylaşmaz, satmaz veya kiralamaz.** Uygulama içinde reklam bulunmaz, analiz/izleme SDK'sı (Google Analytics, Firebase Analytics vb.) kullanılmaz.
+
+---
+
+## 7. Veri Güvenliği
+
+Tüm veriler Android'in standart uygulama korumalı deposunda (sandboxed storage) tutulur; bu depoya yalnızca WellnesApp erişebilir, kök (root) erişimi olmayan cihazlarda başka uygulamalar bu verilere erişemez.
+
+---
+
+## 8. Verilerinizin Silinmesi
+
+Verilerinizin tamamını silmek için:
+- Uygulamayı cihazınızdan kaldırabilir (silebilir), veya
+- Android Ayarlar > Uygulamalar > WellnesApp > Depolama > "Veri Temizle" seçeneğini kullanabilirsiniz.
+
+Bu işlemlerin her ikisi de tüm yerel verilerinizi kalıcı olarak siler; bu verileri bizim tarafımızdan geri getirmemiz mümkün değildir çünkü bizde bir kopyası bulunmamaktadır.
+
+---
+
+## 9. Çocukların Gizliliği
+
+WellnesApp genel kullanıcı kitlesine yöneliktir ve bilerek 13 yaşın altındaki çocuklardan veri toplamaz. Uygulama herhangi bir veriyi sunucuya göndermediği için bu risk yapısal olarak zaten düşüktür.
+
+---
+
+## 10. Politikadaki Değişiklikler
+
+Bu Gizlilik Politikası zaman zaman güncellenebilir. Önemli değişiklikler olması durumunda, güncellenmiş politika bu sayfada yayımlanacak ve sayfanın üstündeki "Son güncelleme" tarihi değiştirilecektir.
+
+---
+
+## 11. İletişim
+
+Bu Gizlilik Politikası hakkında sorularınız için bize şu adresten ulaşabilirsiniz:
+
+**E-posta:** [E-POSTA ADRESİNİZİ GİRİN]
+**Geliştirici:** [AD SOYAD / ŞİRKET ADI GİRİN]

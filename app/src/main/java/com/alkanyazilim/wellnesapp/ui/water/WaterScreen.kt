@@ -236,24 +236,29 @@ private fun WaterStatsCard(weeklyMl: Int, monthlyMl: Int, yearlyMl: Int) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // DÜZELTİLDİ: dayCount artık dönemin TAM uzunluğu (7 / ayın gün sayısı /
+                // 365) değil, Pazartesi'den / ayın 1'inden / 1 Ocak'tan BUGÜNE kadar
+                // GEÇEN gün sayısı. Böylece "günlük ortalama" henüz doldurulmamış
+                // gelecek günlerle sulandırılmış, yanıltıcı düşük bir sayı olmuyor.
+                val today = java.time.LocalDate.now()
                 WaterStatItem(
                     label = "Haftalık",
                     totalMl = weeklyMl,
-                    dayCount = 7,
+                    dayCount = today.dayOfWeek.value, // Pazartesi=1 ... Pazar=7
                     locale = locale,
                     modifier = Modifier.weight(1f)
                 )
                 WaterStatItem(
                     label = "Aylık",
                     totalMl = monthlyMl,
-                    dayCount = java.time.LocalDate.now().lengthOfMonth(),
+                    dayCount = today.dayOfMonth, // ayın 1'inden bugüne kadar geçen gün
                     locale = locale,
                     modifier = Modifier.weight(1f)
                 )
                 WaterStatItem(
                     label = "Yıllık",
                     totalMl = yearlyMl,
-                    dayCount = if (java.time.LocalDate.now().isLeapYear) 366 else 365,
+                    dayCount = today.dayOfYear, // 1 Ocak'tan bugüne kadar geçen gün
                     locale = locale,
                     modifier = Modifier.weight(1f)
                 )

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
@@ -93,29 +95,90 @@ private fun skeletonFor(pose: ExercisePose): Skeleton = when (pose) {
     )
 }
 
+/**
+ * Pose-tracking (MediaPipe/OpenPose tarzı) fitness uygulamalarında görülen,
+ * eklem noktalı ve gradyan dolgulu bir figür stili. Basit tek-renkli çizgi
+ * yerine: kalın gradyanlı gövde, beyaz halkalı eklem noktaları, gradyanlı
+ * baş, ve zemine oturmuş bir gölge ile daha "kasıtlı tasarlanmış" bir görünüm.
+ */
 @Composable
 fun StickFigure(pose: ExercisePose, color: Color, modifier: Modifier = Modifier) {
     val skeleton = skeletonFor(pose)
 
-    Canvas(modifier = modifier.size(140.dp)) {
+    Canvas(modifier = modifier.size(170.dp)) {
         val w = size.width
         val h = size.height
         fun p(pt: Pt) = Offset(pt.x / 100f * w, pt.y / 100f * h)
 
-        val strokeWidth = w * 0.035f
+        val limbStroke = w * 0.042f
+        val torsoStroke = w * 0.06f
+        val shoulderStroke = w * 0.032f
+        val jointOuterRadius = w * 0.05f
+        val jointInnerRadius = w * 0.03f
+        val headRadius = w * 0.105f
 
-        drawLine(color = color, start = p(skeleton.neck), end = p(skeleton.shoulderL), strokeWidth = strokeWidth, cap = StrokeCap.Round)
-        drawLine(color = color, start = p(skeleton.neck), end = p(skeleton.shoulderR), strokeWidth = strokeWidth, cap = StrokeCap.Round)
-        drawLine(color = color, start = p(skeleton.shoulderL), end = p(skeleton.handL), strokeWidth = strokeWidth, cap = StrokeCap.Round)
-        drawLine(color = color, start = p(skeleton.shoulderR), end = p(skeleton.handR), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+        // Zemin gölgesi — figürü "yere oturtan" yumuşak elips
+        drawOval(
+            color = color.copy(alpha = 0.10f),
+            topLeft = Offset(w * 0.22f, h * 0.945f),
+            size = Size(w * 0.56f, h * 0.045f)
+        )
 
-        drawLine(color = color, start = p(skeleton.neck), end = p(skeleton.hip), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+        // Kollar (gövdenin altında kalır)
+        drawLine(color.copy(alpha = 0.9f), p(skeleton.shoulderL), p(skeleton.handL), limbStroke, cap = StrokeCap.Round)
+        drawLine(color.copy(alpha = 0.9f), p(skeleton.shoulderR), p(skeleton.handR), limbStroke, cap = StrokeCap.Round)
 
-        drawLine(color = color, start = p(skeleton.hip), end = p(skeleton.kneeL), strokeWidth = strokeWidth, cap = StrokeCap.Round)
-        drawLine(color = color, start = p(skeleton.hip), end = p(skeleton.kneeR), strokeWidth = strokeWidth, cap = StrokeCap.Round)
-        drawLine(color = color, start = p(skeleton.kneeL), end = p(skeleton.footL), strokeWidth = strokeWidth, cap = StrokeCap.Round)
-        drawLine(color = color, start = p(skeleton.kneeR), end = p(skeleton.footR), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+        // Bacaklar
+        drawLine(color.copy(alpha = 0.9f), p(skeleton.hip), p(skeleton.kneeL), limbStroke, cap = StrokeCap.Round)
+        drawLine(color.copy(alpha = 0.9f), p(skeleton.hip), p(skeleton.kneeR), limbStroke, cap = StrokeCap.Round)
+        drawLine(color.copy(alpha = 0.9f), p(skeleton.kneeL), p(skeleton.footL), limbStroke, cap = StrokeCap.Round)
+        drawLine(color.copy(alpha = 0.9f), p(skeleton.kneeR), p(skeleton.footR), limbStroke, cap = StrokeCap.Round)
 
-        drawCircle(color = color, radius = w * 0.09f, center = p(skeleton.head))
+        // Omuz genişliği hattı — gövdeye hacim hissi katar
+        drawLine(color.copy(alpha = 0.85f), p(skeleton.shoulderL), p(skeleton.shoulderR), shoulderStroke, cap = StrokeCap.Round)
+
+        // Gövde (boyun-kalça) — dikey gradyanlı kalın hat, en belirgin çizgi
+        drawLine(
+            brush = Brush.verticalGradient(
+                colors = listOf(color, color.copy(alpha = 0.75f))
+            ),
+            start = p(skeleton.neck),
+            end = p(skeleton.hip),
+            strokeWidth = torsoStroke,
+            cap = StrokeCap.Round
+        )
+
+        // Eklem noktaları — beyaz halka + renkli merkez (pose-tracking görünümü)
+        val joints = listOf(
+            skeleton.shoulderL, skeleton.shoulderR, skeleton.hip,
+            skeleton.kneeL, skeleton.kneeR,
+            skeleton.handL, skeleton.handR,
+            skeleton.footL, skeleton.footR
+        )
+        joints.forEach { joint ->
+            val center = p(joint)
+            drawCircle(color = Color.White, radius = jointOuterRadius, center = center)
+            drawCircle(color = color, radius = jointInnerRadius, center = center)
+        }
+
+        // Baş — radyal gradyanlı daire + hafif ışık vurgusu
+        val headCenter = p(skeleton.head)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(color, color.copy(alpha = 0.78f)),
+                center = headCenter,
+                radius = headRadius
+            ),
+            radius = headRadius,
+            center = headCenter
+        )
+        drawCircle(
+            color = Color.White.copy(alpha = 0.4f),
+            radius = headRadius * 0.32f,
+            center = Offset(
+                headCenter.x - headRadius * 0.32f,
+                headCenter.y - headRadius * 0.32f
+            )
+        )
     }
 }

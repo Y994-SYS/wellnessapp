@@ -35,10 +35,12 @@ class WaterViewModel(
     private val allConsumedEntries = store.allConsumedEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    // YENİ: Son 7 gün (bugün dahil) toplam tüketim
+    // DÜZELTİLDİ: Artık "son 7 gün" (kayan pencere) değil, gerçek takvim haftası
+    // (Pazartesi-Pazar). Böylece her Pazartesi otomatik sıfırlanır, önceki haftanın
+    // verisiyle karışmaz.
     val weeklyTotal = allConsumedEntries.map { entries ->
         val today = LocalDate.now()
-        val weekStart = today.minusDays(6)
+        val weekStart = today.with(java.time.DayOfWeek.MONDAY)
         entries.filterKeys { it in weekStart..today }.values.sum()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
