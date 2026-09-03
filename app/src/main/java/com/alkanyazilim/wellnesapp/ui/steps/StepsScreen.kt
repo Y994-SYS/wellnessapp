@@ -1,5 +1,7 @@
 package com.alkanyazilim.wellnesapp.ui.steps
 
+// test aider bağlantısı
+
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Canvas
