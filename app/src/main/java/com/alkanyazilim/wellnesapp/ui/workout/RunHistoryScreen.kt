@@ -208,15 +208,30 @@ private fun RunHistoryRow(
 
             Spacer(Modifier.height(8.dp))
 
-            // Alt satır: adım ve mesafe, ikonlarla
+            // YENİ: Hedef türüne göre farklı gösterim.
+            // Süre hedefiyle koşulmuşsa "X / Y adım" göstermek anlamsız (adım hedefi
+            // hiç belirlenmemişti) — bunun yerine hedeflenen süreyi gösteriyoruz.
+            val isDurationGoal = session.goalType == "DURATION"
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                StatChip(
-                    icon = Icons.Filled.DirectionsWalk,
-                    text = "${session.steps} / ${session.targetSteps} adım"
-                )
+                if (isDurationGoal) {
+                    StatChip(
+                        icon = Icons.Filled.Timer,
+                        text = "${session.targetDurationSeconds / 60} dk hedef"
+                    )
+                    StatChip(
+                        icon = Icons.Filled.DirectionsWalk,
+                        text = "${session.steps} adım"
+                    )
+                } else {
+                    StatChip(
+                        icon = Icons.Filled.DirectionsWalk,
+                        text = "${session.steps} / ${session.targetSteps} adım"
+                    )
+                }
                 StatChip(
                     icon = Icons.Filled.Straighten,
                     text = String.format(locale, "%.2f km", distanceKm)

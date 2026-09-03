@@ -1,11 +1,15 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.alkanyazilim.wellnesapp.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +24,10 @@ import com.alkanyazilim.wellnesapp.data.local.ThemeMode
 import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -41,6 +49,70 @@ fun SettingsScreen(onBack: () -> Unit) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    // YENİ: İçe aktarma yıkıcı bir işlem olduğu için önce onay istiyoruz
+    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportData(uri) { result ->
+                coroutineScope.launch {
+                    if (result.isSuccess) {
+                        snackbarHostState.showSnackbar("Yedek başarıyla kaydedildi")
+                    } else {
+                        snackbarHostState.showSnackbar("Yedekleme başarısız oldu: ${result.exceptionOrNull()?.message ?: "bilinmeyen hata"}")
+                    }
+                }
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            // Doğrudan içe aktarmıyoruz — önce kullanıcıya onay diyaloğu gösteriyoruz
+            pendingImportUri = uri
+        }
+    }
+
+    if (pendingImportUri != null) {
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = { Text("Yedeği geri yükle?") },
+            text = {
+                Text(
+                    "Bu işlem, cihazındaki mevcut tüm görev, koşu geçmişi, su kayıtları " +
+                            "ve profil bilgilerinin ÜZERİNE yazacak. Bu işlem geri alınamaz. " +
+                            "Devam etmek istiyor musun?"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val uri = pendingImportUri!!
+                    pendingImportUri = null
+                    viewModel.importData(uri) { result ->
+                        coroutineScope.launch {
+                            if (result.isSuccess) {
+                                snackbarHostState.showSnackbar("Veriler geri yüklendi")
+                            } else {
+                                snackbarHostState.showSnackbar("Geri yükleme başarısız oldu: ${result.exceptionOrNull()?.message ?: "bilinmeyen hata"}")
+                            }
+                        }
+                    }
+                }) {
+                    Text("Evet, geri yükle", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImportUri = null }) {
+                    Text("Vazgeç")
+                }
+            }
+        )
+    }
 
     Scaffold(
         modifier = Modifier.background(AppColors.Background),
@@ -223,6 +295,50 @@ fun SettingsScreen(onBack: () -> Unit) {
                     accentColor = AppColors.WaterAccent,
                     onChange = { viewModel.setGlassSize(it) }
                 )
+            }
+
+            // YENİ: Yedekle / Geri Yükle bölümü
+            SettingsSection(title = "Yedekle ve Geri Yükle") {
+                Text(
+                    "Tüm görevlerin, koşu geçmişin, su kayıtların ve profil bilgin tek bir " +
+                            "dosyaya kaydedilir. Telefon değiştirirken ya da uygulamayı yeniden " +
+                            "kurarken bu dosyayla verilerini geri getirebilirsin.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary
+                )
+                Spacer(Modifier.height(16.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale("tr")).format(Date())
+                            exportLauncher.launch("wellnesapp_yedek_$timestamp.json")
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = AppColors.HomeAccent
+                        )
+                    ) {
+                        Icon(Icons.Filled.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Dışa Aktar")
+                    }
+
+                    OutlinedButton(
+                        onClick = { importLauncher.launch(arrayOf("application/json")) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = AppColors.HomeAccent
+                        )
+                    ) {
+                        Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("İçe Aktar")
+                    }
+                }
             }
 
             Spacer(Modifier.height(4.dp))

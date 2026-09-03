@@ -39,4 +39,28 @@ interface TaskDao {
 
     @Query("UPDATE tasks SET reminderEnabled = :enabled, reminderHour = :hour, reminderMinute = :minute WHERE id = :taskId")
     suspend fun updateReminder(taskId: Int, enabled: Boolean, hour: Int?, minute: Int?)
+
+    // ---- YENİ: Yedekleme (export/import) için ----
+
+    // Export: tüm tamamlama kayıtlarını tek seferde okur (Flow değil, anlık liste)
+    @Query("SELECT * FROM task_completions")
+    suspend fun getAllCompletionsOnce(): List<TaskCompletionEntity>
+
+    // Import: geri yüklemeden önce mevcut verileri temizler
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAllTasks()
+
+    @Query("DELETE FROM task_completions")
+    suspend fun deleteAllCompletions()
+
+    // Import: yedekteki ORİJİNAL id'lerle geri yükler (REPLACE ile çakışma olursa
+    // üzerine yazar). Bu, task_completions tablosundaki taskId referanslarının
+    // doğru görevlere işaret etmeye devam etmesi için ZORUNLU — id'ler otomatik
+    // yeniden üretilseydi (autoGenerate ile normal insert), tüm tamamlama
+    // kayıtları yanlış (ya da var olmayan) görevlere bağlanmış olurdu.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTasksRestore(tasks: List<TaskEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCompletionsRestore(completions: List<TaskCompletionEntity>)
 }

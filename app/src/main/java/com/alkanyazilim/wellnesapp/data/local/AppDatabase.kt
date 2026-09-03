@@ -19,23 +19,7 @@ class Converters {
 
 @Database(
     entities = [TaskEntity::class, TaskCompletionEntity::class, RunSessionEntity::class],
-    version = 4,
-    // DEĞİŞTİ: false -> true. Şema geçmişi artık dosya olarak dışa aktarılıyor
-    // (bkz. app/schemas/). Bu, gelecekte yazacağın migration'ları GERÇEK şemaya
-    // karşı test edebilmen için gerekli — build.gradle'a şu ayarı ekle:
-    //
-    // android {
-    //     defaultConfig {
-    //         javaCompileOptions {
-    //             annotationProcessorOptions {
-    //                 arguments += mapOf("room.schemaLocation" to "$projectDir/schemas")
-    //             }
-    //         }
-    //     }
-    // }
-    //
-    // Sonra app/schemas/ klasörünü Git'e ekle (silme) — her versiyon için bir
-    // JSON dosyası birikir, migration yazarken buna bakarak doğru SQL'i üretirsin.
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -47,20 +31,19 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // YENİ: Gelecekteki her şema değişikliği için buraya bir Migration eklenecek.
-        // Şu an boş çünkü henüz versiyon 4'ten sonra bir değişiklik yapılmadı.
-        //
-        // ÖRNEK — versiyon 5'te TaskEntity'ye "priority" adında Int bir alan eklersen:
-        //
-        // private val MIGRATION_4_5 = object : Migration(4, 5) {
-        //     override fun migrate(db: SupportSQLiteDatabase) {
-        //         db.execSQL("ALTER TABLE TaskEntity ADD COLUMN priority INTEGER NOT NULL DEFAULT 0")
-        //     }
-        // }
-        //
-        // Sonra bu listeye ekle: val migrations = arrayOf(MIGRATION_4_5)
-        // ve aşağıdaki .addMigrations(*migrations) satırına ver.
-        private val migrations: Array<Migration> = arrayOf()
+        // YENİ: Versiyon 4 -> 5 geçişi. RunSessionEntity'ye iki alan eklendi:
+        // goalType (koşu adım mı süre mi hedefiyle başladı) ve
+        // targetDurationSeconds (süre hedefliyse kaç saniyeydi). Süre bazlı koşu
+        // hedefi özelliği eklenirken bu bilgi geçmişe kaydedilmiyordu — bu
+        // migration mevcut kullanıcıların koşu geçmişini SİLMEDEN şemayı genişletir.
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE run_sessions ADD COLUMN goalType TEXT NOT NULL DEFAULT 'STEPS'")
+                db.execSQL("ALTER TABLE run_sessions ADD COLUMN targetDurationSeconds INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val migrations: Array<Migration> = arrayOf(MIGRATION_4_5)
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {

@@ -25,6 +25,7 @@ import com.alkanyazilim.wellnesapp.data.model.ExerciseTemplate
 import com.alkanyazilim.wellnesapp.data.model.VoiceCue
 import com.alkanyazilim.wellnesapp.data.model.templatesForCategory
 import com.alkanyazilim.wellnesapp.ui.theme.AppColors
+import com.alkanyazilim.wellnesapp.ui.util.rememberCurrentLocale
 import kotlinx.coroutines.delay
 import java.util.Locale
 import android.speech.tts.TextToSpeech
@@ -33,6 +34,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 private enum class ExerciseMode { SURELI, SET_BAZLI }
 private enum class SessionState { FORM, ACTIVE, RESTING, FINISHED }
@@ -65,6 +72,10 @@ fun CustomExerciseScreen(
     var selectedVoiceCues by remember(categoryLabel) { mutableStateOf(listOf<VoiceCue>()) }
 
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    // YENİ: Kullanıcının oturum içinde sesi kapatabilmesi için. rememberSaveable
+    // DEĞİL çünkü her yeni egzersiz başlangıcında sesin varsayılan (açık) olması
+    // daha doğru bir davranış — kalıcı bir "sessiz mod" tercihi değil.
+    var voiceEnabled by remember(categoryLabel) { mutableStateOf(true) }
 
     DisposableEffect(Unit) {
         val instance = TextToSpeech(context) { status ->
@@ -79,15 +90,46 @@ fun CustomExerciseScreen(
         }
     }
 
+    // YENİ — GÜVENLİK ÖNLEMİ: Bu ekran Compose'tan tam olarak kaldırılmadan (örn.
+    // sekme geçişinde eski ekran görünürlük bazlı gizleniyorsa) TTS susmayabilir.
+    // Bu efekt, Activity ön planda değilken (ON_STOP: kullanıcı başka bir uygulamaya
+    // geçti, ekranı kapattı vb.) sesi zorla durdurur. NOT: Bu, aynı Activity İÇİNDE
+    // bottom nav ile başka bir sekmeye geçişi KAPSAMAZ — o senaryo için asıl kaynağı
+    // (navigasyon dosyasını) görmemiz gerekiyor.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            // ON_PAUSE: bu ekran artık en üstteki/aktif ekran değil (örn. başka bir
+            // bottom nav sekmesine geçildi) — ON_STOP'u beklemeden hemen durdur.
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                tts?.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     // Önemli sistem anonsları (başlama, bitiş, set geçişi): önceki sözü keser, hemen konuşur.
     fun speak(text: String) {
+        if (!voiceEnabled) return
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
-    // YENİ: Sesli koçluk komutları (hareket talimatları): sıraya eklenir, birbirini
-    // kesmez. Hızlı tempolu hareketlerde art arda net bir şekilde duyulmasını sağlar.
+    // Sesli koçluk komutları (hareket talimatları): sıraya eklenir, birbirini kesmez.
     fun speakQueued(text: String) {
+        if (!voiceEnabled) return
         tts?.speak(text, TextToSpeech.QUEUE_ADD, null, null)
+    }
+
+    // YENİ: Kullanıcı mute butonuna bastığında hem gelecek konuşmaları engeller
+    // (voiceEnabled=false) hem de o an çalmakta olan/sırada bekleyen sesi anında keser.
+    fun toggleVoice() {
+        voiceEnabled = !voiceEnabled
+        if (!voiceEnabled) {
+            tts?.stop()
+        }
     }
 
     LaunchedEffect(sessionState, remainingSeconds) {
@@ -221,6 +263,8 @@ fun CustomExerciseScreen(
             totalSets = totalSets,
             repsPerSet = repsPerSet,
             hasVoiceCoaching = selectedVoiceCues.isNotEmpty(),
+            voiceEnabled = voiceEnabled,
+            onToggleVoice = { toggleVoice() },
             onSetComplete = {
                 if (currentSet < totalSets) {
                     speak("Set $currentSet tamamlandı, dinlenme zamanı")
@@ -271,6 +315,7 @@ private fun ExerciseForm(
     selectedInstructions: List<String>
 ) {
     val templates = templatesForCategory(categoryLabel)
+    val locale = rememberCurrentLocale()
 
     Column(
         modifier = Modifier
@@ -462,7 +507,7 @@ private fun ExerciseForm(
                 }
                 Spacer(Modifier.width(16.dp))
                 Text(
-                    text = String.format(Locale.getDefault(), "%d:%02d", durationSeconds / 60, durationSeconds % 60),
+                    text = String.format(locale, "%d:%02d", durationSeconds / 60, durationSeconds % 60),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.TextPrimary
@@ -604,9 +649,13 @@ private fun ActiveExerciseView(
     totalSets: Int,
     repsPerSet: Int,
     hasVoiceCoaching: Boolean,
+    voiceEnabled: Boolean,
+    onToggleVoice: () -> Unit,
     onSetComplete: () -> Unit,
     onStop: () -> Unit
 ) {
+    val locale = rememberCurrentLocale()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -628,11 +677,23 @@ private fun ActiveExerciseView(
 
             if (hasVoiceCoaching) {
                 Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🔊", fontSize = 14.sp)
-                    Spacer(Modifier.width(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable(onClick = onToggleVoice)
+                        .background(accentColor.copy(alpha = 0.1f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = if (voiceEnabled) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                        contentDescription = if (voiceEnabled) "Sesi kapat" else "Sesi aç",
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        "Sesli koçluk açık",
+                        if (voiceEnabled) "Sesli koçluk açık — kapatmak için dokun" else "Sesli koçluk kapalı — açmak için dokun",
                         style = MaterialTheme.typography.labelMedium,
                         color = accentColor
                     )
@@ -643,7 +704,7 @@ private fun ActiveExerciseView(
 
             if (mode == ExerciseMode.SURELI) {
                 Text(
-                    text = String.format(Locale.getDefault(), "%d:%02d", remainingSeconds / 60, remainingSeconds % 60),
+                    text = String.format(locale, "%d:%02d", remainingSeconds / 60, remainingSeconds % 60),
                     fontSize = 56.sp,
                     fontWeight = FontWeight.Bold,
                     color = accentColor

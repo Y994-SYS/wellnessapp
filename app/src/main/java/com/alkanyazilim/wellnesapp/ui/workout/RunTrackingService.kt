@@ -9,8 +9,11 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.core.app.NotificationCompat
 import com.alkanyazilim.wellnesapp.MainActivity
 import com.alkanyazilim.wellnesapp.data.local.AppDatabase
@@ -25,11 +28,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
+// YENİ: Koşu hedefi artık adım sayısı VEYA süre olabilir.
+enum class RunGoalType { STEPS, DURATION }
+
 data class RunData(
     val isRunning: Boolean = false,
+    val goalType: RunGoalType = RunGoalType.STEPS,
     val targetSteps: Int = 2000,
+    val targetDurationSeconds: Int = 900, // varsayılan 15 dk
     val sessionSteps: Int = 0,
-    val elapsedSeconds: Int = 0
+    val elapsedSeconds: Int = 0,
+    // Süre hedefine ulaşıldığında bildirim/ses birden fazla kez tetiklenmesin diye
+    val goalReachedNotified: Boolean = false
 )
 
 object RunSessionState {
@@ -45,10 +55,18 @@ class RunTrackingService : Service(), SensorEventListener {
 
     companion object {
         const val CHANNEL_ID = "run_tracking_channel"
+        // YENİ: Süre hedefine ulaşıldığında gösterilen tek seferlik, SESLİ bildirim
+        // için ayrı bir kanal. Ana takip kanalı (CHANNEL_ID) düşük öncelikli ve
+        // sessiz kalmaya devam ediyor — bu ikisini karıştırmıyoruz.
+        const val CHANNEL_ID_GOAL_REACHED = "run_goal_reached_channel"
         const val NOTIFICATION_ID = 3001
+        const val NOTIFICATION_ID_GOAL_REACHED = 3002
         const val ACTION_START = "com.alkanyazilim.wellnesapp.action.START_RUN"
         const val ACTION_STOP = "com.alkanyazilim.wellnesapp.action.STOP_RUN"
         const val EXTRA_TARGET_STEPS = "target_steps"
+        // YENİ
+        const val EXTRA_GOAL_TYPE = "goal_type"
+        const val EXTRA_TARGET_DURATION_SECONDS = "target_duration_seconds"
     }
 
     private var sensorManager: SensorManager? = null
@@ -70,21 +88,35 @@ class RunTrackingService : Service(), SensorEventListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startTracking(intent.getIntExtra(EXTRA_TARGET_STEPS, 2000))
+            ACTION_START -> {
+                val goalTypeName = intent.getStringExtra(EXTRA_GOAL_TYPE) ?: RunGoalType.STEPS.name
+                val goalType = runCatching { RunGoalType.valueOf(goalTypeName) }.getOrDefault(RunGoalType.STEPS)
+                val targetSteps = intent.getIntExtra(EXTRA_TARGET_STEPS, 2000)
+                val targetDuration = intent.getIntExtra(EXTRA_TARGET_DURATION_SECONDS, 900)
+                startTracking(goalType, targetSteps, targetDuration)
+            }
             ACTION_STOP -> stopTracking()
         }
         return START_STICKY
     }
 
-    private fun startTracking(targetSteps: Int) {
+    private fun startTracking(goalType: RunGoalType, targetSteps: Int, targetDurationSeconds: Int) {
         baseline = null
         sessionStartMillis = System.currentTimeMillis()
         RunSessionState.update {
-            RunData(isRunning = true, targetSteps = targetSteps, sessionSteps = 0, elapsedSeconds = 0)
+            RunData(
+                isRunning = true,
+                goalType = goalType,
+                targetSteps = targetSteps,
+                targetDurationSeconds = targetDurationSeconds,
+                sessionSteps = 0,
+                elapsedSeconds = 0,
+                goalReachedNotified = false
+            )
         }
 
-        createChannel()
-        startForeground(NOTIFICATION_ID, buildNotification(0, targetSteps))
+        createChannels()
+        startForeground(NOTIFICATION_ID, buildNotification(0, targetSteps, goalType, 0, targetDurationSeconds))
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         val stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
@@ -96,15 +128,20 @@ class RunTrackingService : Service(), SensorEventListener {
         timerJob = serviceScope.launch {
             while (true) {
                 delay(1000)
-                // NOT: Bu sayaç yalnızca CANLI EKRAN GÖSTERİMİ içindir.
-                // Doze modu / CPU uykusu sırasında delay(1000) tam 1 saniyede
-                // tetiklenmeyebilir, bu yüzden bu sayaç gerçek geçen süreden
-                // az sayabilir. Kalıcı kayıt (saveSessionToHistory) bu sayaca
-                // DEĞİL, gerçek saat farkına (wall-clock) göre hesaplanır.
                 val realElapsed = ((System.currentTimeMillis() - sessionStartMillis) / 1000).toInt()
                 RunSessionState.update { it.copy(elapsedSeconds = realElapsed) }
                 val current = RunSessionState.data.value
-                updateNotification(current.sessionSteps, current.targetSteps)
+
+                // YENİ: Süre hedefine ulaşıldıysa bir kez sesli/titreşimli bildirim gönder
+                if (current.goalType == RunGoalType.DURATION &&
+                    !current.goalReachedNotified &&
+                    realElapsed >= current.targetDurationSeconds
+                ) {
+                    RunSessionState.update { it.copy(goalReachedNotified = true) }
+                    notifyGoalReached()
+                }
+
+                updateNotification(current.sessionSteps, current.targetSteps, current.goalType, realElapsed, current.targetDurationSeconds)
             }
         }
     }
@@ -121,15 +158,8 @@ class RunTrackingService : Service(), SensorEventListener {
     private fun saveSessionToHistory() {
         val current = RunSessionState.data.value
         val endMillis = System.currentTimeMillis()
-
-        // KRİTİK DÜZELTME: Süreyi tik sayacından (current.elapsedSeconds) değil,
-        // gerçek başlangıç/bitiş saat farkından hesaplıyoruz. Tik sayacı, Doze
-        // modu / arka plan CPU kısıtlamaları yüzünden gecikebilir ve gerçek
-        // süreden birkaç dakika az gösterebilirdi. Wall-clock farkı bu duruma
-        // bağışıktır ve her zaman doğru sonucu verir.
         val realDurationSeconds = ((endMillis - sessionStartMillis) / 1000).toInt()
 
-        // Sadece en az birkaç saniye süren ve içinde anlamlı veri olan oturumları kaydet
         if (realDurationSeconds < 3) return
 
         val session = RunSessionEntity(
@@ -137,18 +167,16 @@ class RunTrackingService : Service(), SensorEventListener {
             endTimeMillis = endMillis,
             steps = current.sessionSteps,
             targetSteps = current.targetSteps,
-            durationSeconds = realDurationSeconds
+            durationSeconds = realDurationSeconds,
+            // YENİ: Süre bazlı koşu hedefi artık geçmişe de doğru şekilde kaydediliyor
+            goalType = current.goalType.name,
+            targetDurationSeconds = current.targetDurationSeconds
         )
-        // Servis kapanmadan önce senkron şekilde kaydediyoruz (runBlocking kısa ömürlü, güvenli)
         runBlocking {
             repository.saveSession(session)
         }
     }
 
-    /**
-     * Kullanıcı uygulamayı "son uygulamalar" listesinden kaydırıp kapatırsa bu çağrılır.
-     * Aktif bir koşu varsa, o ana kadarki veriyi kaydedip servisi düzgünce kapatıyoruz.
-     */
     override fun onTaskRemoved(rootIntent: Intent?) {
         if (RunSessionState.data.value.isRunning) {
             stopTracking()
@@ -165,7 +193,13 @@ class RunTrackingService : Service(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
-    private fun buildNotification(steps: Int, target: Int): android.app.Notification {
+    private fun buildNotification(
+        steps: Int,
+        target: Int,
+        goalType: RunGoalType,
+        elapsedSeconds: Int,
+        targetDurationSeconds: Int
+    ): android.app.Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -174,24 +208,72 @@ class RunTrackingService : Service(), SensorEventListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val contentText = if (goalType == RunGoalType.DURATION) {
+            val remaining = (targetDurationSeconds - elapsedSeconds).coerceAtLeast(0)
+            val mm = remaining / 60
+            val ss = remaining % 60
+            "$steps adım · kalan süre %02d:%02d".format(mm, ss)
+        } else {
+            "$steps / $target adım"
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_directions)
             .setContentTitle("Koşu takip ediliyor")
-            .setContentText("$steps / $target adım")
+            .setContentText(contentText)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent)
             .build()
     }
 
-    private fun updateNotification(steps: Int, target: Int) {
+    private fun updateNotification(
+        steps: Int,
+        target: Int,
+        goalType: RunGoalType,
+        elapsedSeconds: Int,
+        targetDurationSeconds: Int
+    ) {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification(steps, target))
+        manager.notify(NOTIFICATION_ID, buildNotification(steps, target, goalType, elapsedSeconds, targetDurationSeconds))
     }
 
-    private fun createChannel() {
+    // YENİ: Süre hedefine ulaşıldığında tetiklenen, sesli + titreşimli tek seferlik bildirim
+    private fun notifyGoalReached() {
+        val openAppIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 1, openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID_GOAL_REACHED)
+            .setSmallIcon(android.R.drawable.ic_menu_directions)
+            .setContentTitle("Süre hedefine ulaştın! 🎉")
+            .setContentText("Harika iş çıkardın. İstersen koşuya devam edebilir ya da durdurabilirsin.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID_GOAL_REACHED, notification)
+
+        // Ekstra: ekran kapalıyken de fark edilsin diye titreşim
+        val vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 150, 300), -1))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(longArrayOf(0, 300, 150, 300), -1)
+        }
+    }
+
+    private fun createChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
             if (manager.getNotificationChannel(CHANNEL_ID) == null) {
                 val channel = NotificationChannel(
                     CHANNEL_ID,
@@ -199,6 +281,23 @@ class RunTrackingService : Service(), SensorEventListener {
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
                     description = "Aktif koşu oturumu bildirimi"
+                }
+                manager.createNotificationChannel(channel)
+            }
+
+            if (manager.getNotificationChannel(CHANNEL_ID_GOAL_REACHED) == null) {
+                val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val channel = NotificationChannel(
+                    CHANNEL_ID_GOAL_REACHED,
+                    "Koşu Hedefi Tamamlandı",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Süre hedefine ulaşıldığında sesli bildirim"
+                    setSound(soundUri, android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build())
+                    enableVibration(true)
                 }
                 manager.createNotificationChannel(channel)
             }

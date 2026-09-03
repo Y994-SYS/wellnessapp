@@ -67,6 +67,25 @@ class WaterDataStore(private val context: Context) {
         }
     }
 
+    // YENİ (yedekleme için): addWater'ın aksine DELTA eklemez, mutlak değeri
+    // doğrudan yazar. Import sırasında yedekteki tam ml değerini olduğu gibi
+    // geri yüklemek için kullanılır.
+    suspend fun setConsumedForDate(date: String, amountMl: Int) {
+        context.waterDataStore.edit { prefs ->
+            prefs[consumedKeyFor(date)] = amountMl.coerceAtLeast(0)
+        }
+    }
+
+    // YENİ (yedekleme için): İçe aktarmadan önce eski su tüketim kayıtlarını
+    // temizler — aksi halde eski ve yedekten gelen kayıtlar karışıp yanlış
+    // toplamlar oluşabilir.
+    suspend fun clearAllConsumedEntries() {
+        context.waterDataStore.edit { prefs ->
+            val keysToRemove = prefs.asMap().keys.filter { it.name.startsWith(CONSUMED_KEY_PREFIX) }
+            keysToRemove.forEach { prefs.remove(it) }
+        }
+    }
+
     suspend fun setReminderSettings(
         enabled: Boolean,
         intervalMin: Int,

@@ -1,9 +1,11 @@
 package com.alkanyazilim.wellnesapp.ui.settings
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.alkanyazilim.wellnesapp.data.backup.BackupManager
 import com.alkanyazilim.wellnesapp.data.local.AppSettingsDataStore
 import com.alkanyazilim.wellnesapp.data.local.ThemeMode
 import com.alkanyazilim.wellnesapp.data.local.UserPreferences
@@ -15,7 +17,9 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val settingsStore: AppSettingsDataStore,
     private val userPreferences: UserPreferences,
-    private val waterStore: WaterDataStore
+    private val waterStore: WaterDataStore,
+    // YENİ
+    private val backupManager: BackupManager
 ) : ViewModel() {
 
     val themeMode = settingsStore.themeMode
@@ -58,6 +62,28 @@ class SettingsViewModel(
         viewModelScope.launch { waterStore.setGlassSize(ml) }
     }
 
+    // ---- YENİ: Yedekle / Geri Yükle ----
+
+    /** Tüm veriyi [uri]'ye JSON olarak yazar. Sonucu [onComplete] ile bildirir. */
+    fun exportData(uri: Uri, onComplete: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val result = runCatching { backupManager.exportToUri(uri) }
+            onComplete(result)
+        }
+    }
+
+    /**
+     * [uri]'deki yedek dosyasını okuyup mevcut TÜM yerel veriyi bununla değiştirir.
+     * Bu işlem yıkıcıdır (destructive) — UI tarafında çağırmadan önce kullanıcıdan
+     * onay almalısın.
+     */
+    fun importData(uri: Uri, onComplete: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val result = runCatching { backupManager.importFromUri(uri) }
+            onComplete(result)
+        }
+    }
+
     class Factory(private val context: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -65,7 +91,8 @@ class SettingsViewModel(
             return SettingsViewModel(
                 AppSettingsDataStore(appContext),
                 UserPreferences(appContext),
-                WaterDataStore(appContext)
+                WaterDataStore(appContext),
+                BackupManager(appContext)
             ) as T
         }
     }
