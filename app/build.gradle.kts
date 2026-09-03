@@ -9,15 +9,20 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.alkanyazilim.wellnesapp"
+        applicationId = "com.alkanyazilim.wellnessapp"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDirs("$projectDir/schemas")
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -70,5 +75,11 @@ dependencies {
     implementation("androidx.room:room-runtime:2.7.1")
     implementation("androidx.room:room-ktx:2.7.1")
     ksp("androidx.room:room-compiler:2.7.1")
+    androidTestImplementation("androidx.room:room-testing:2.7.1")
+    implementation("androidx.room:room-testing:2.7.1")
+    implementation("androidx.test.ext:junit:1.3.0")
+    implementation("androidx.test:runner:1.6.2")
+    implementation("junit:junit:4.13.2")
+
     implementation(libs.lottie.compose)
 }
