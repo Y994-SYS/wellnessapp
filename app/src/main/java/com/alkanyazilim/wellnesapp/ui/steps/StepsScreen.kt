@@ -1,6 +1,8 @@
 package com.alkanyazilim.wellnesapp.ui.steps
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,12 +32,12 @@ import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.util.Locale
-import androidx.compose.ui.graphics.Color
+import java.util.*
 
 @Composable
 fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
     val healthConnectManager = remember { HealthConnectManager(context) }
     val userPreferences = remember { UserPreferences(context) }
     val coroutineScope = rememberCoroutineScope()
@@ -166,6 +174,9 @@ private fun StepsContent(
     val distanceKm = todaySteps * 0.000762
     val calories = todaySteps * 0.04
 
+    // Locale için LocalConfiguration kullan
+    val locale = LocalConfiguration.current.locale
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -183,6 +194,11 @@ private fun StepsContent(
                 onGoalClick = onGoalClick
             )
         }
+
+        item {
+            WeeklyStepsChart(history = history, goal = goal.toLong())
+        }
+
         item {
             Text(
                 text = "Geçmiş Günler",
@@ -225,13 +241,13 @@ private fun TodayStepsCard(
             ) {
                 Spacer(Modifier.width(24.dp))
                 Text(
-                    "Bugün",
+                    text = "Bugün",
                     style = MaterialTheme.typography.titleMedium,
                     color = AppColors.TextPrimary
                 )
                 IconButton(onClick = onGoalClick) {
                     Icon(
-                        Icons.Filled.Settings,
+                        imageVector = Icons.Filled.Settings,
                         contentDescription = "Hedef ayarla",
                         tint = AppColors.TextSecondary
                     )
@@ -270,15 +286,15 @@ private fun TodayStepsCard(
             ) {
                 StatItem(
                     label = "Mesafe",
-                    value = String.format(Locale.getDefault(), "%.2f km", distanceKm)
+                    value = String.format("%.2f km", distanceKm)
                 )
                 StatItem(
                     label = "Kalori",
-                    value = String.format(Locale.getDefault(), "%.0f kcal", calories)
+                    value = String.format("%.0f kcal", calories)
                 )
                 StatItem(
                     label = "Hedef",
-                    value = "%${(progress * 100).toInt()}"
+                    value = "${(progress * 100).toInt()}%"
                 )
             }
         }
@@ -289,13 +305,13 @@ private fun TodayStepsCard(
 private fun StatItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            value,
+            text = value,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.TextPrimary
         )
         Text(
-            label,
+            text = label,
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.TextSecondary
         )
@@ -306,8 +322,9 @@ private fun StatItem(label: String, value: String) {
 private fun DailyStepsRow(day: DailySteps, onClick: () -> Unit) {
     val distanceKm = day.steps * 0.000762
     val calories = day.steps * 0.04
-    val dayLabel = day.date.format(DateTimeFormatter.ofPattern("d MMMM", Locale("tr")))
-    val weekdayLabel = day.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("tr"))
+
+    // Locale için LocalConfiguration kullan
+    val locale = LocalConfiguration.current.locale
 
     Card(
         modifier = Modifier
@@ -323,25 +340,27 @@ private fun DailyStepsRow(day: DailySteps, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
+                val dayLabel = day.date.format(DateTimeFormatter.ofPattern("d MMMM", locale))
+                val weekdayLabel = day.date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
                 Text(
-                    dayLabel,
+                    text = dayLabel,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.TextPrimary
                 )
                 Text(
-                    weekdayLabel,
+                    text = weekdayLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "${day.steps} adım",
+                    text = "${day.steps} adım",
                     fontWeight = FontWeight.Bold,
                     color = AppColors.TextPrimary
                 )
                 Text(
-                    String.format(Locale.getDefault(), "%.2f km · %.0f kcal", distanceKm, calories),
+                    text = String.format("%.2f km · %.0f kcal", distanceKm, calories),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary
                 )
@@ -365,7 +384,7 @@ private fun GoalPickerDialog(
         containerColor = AppColors.Surface,
         title = {
             Text(
-                "Günlük adım hedefi",
+                text = "Günlük adım hedefi",
                 color = AppColors.TextPrimary
             )
         },
@@ -401,7 +420,7 @@ private fun GoalPickerDialog(
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Önerilen değerler:",
+                    text = "Önerilen değerler:",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary
                 )
@@ -450,6 +469,85 @@ private fun LazyColumnPresetRow(
                     labelColor = AppColors.TextPrimary
                 )
             )
+        }
+    }
+}
+
+@Composable
+private fun WeeklyStepsChart(history: List<DailySteps>, goal: Long) {
+    // history en yeniden en eskiye sıralı geliyor (readStepsForLastDays).
+    // Son 7 günü alıp kronolojik sıraya (eskiden yeniye) çeviriyoruz.
+    val lastWeek = history.take(7).sortedBy { it.date }
+    if (lastWeek.isEmpty()) return
+
+    val today = java.time.LocalDate.now()
+
+    // Locale için LocalConfiguration kullan
+    val locale = LocalConfiguration.current.locale
+
+    val maxValue = (lastWeek.maxOf { it.steps }.coerceAtLeast(goal)).toFloat()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            Text(
+                text = "Bu Hafta",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
+            )
+            Spacer(Modifier.height(16.dp))
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                val barCount = lastWeek.size
+                val spacingPx = 12.dp.toPx()
+                val barWidth = (size.width - spacingPx * (barCount - 1)) / barCount
+                val goalY = size.height * (1f - (goal.toFloat() / maxValue).coerceIn(0f, 1f))
+
+                // Hedef çizgisi (kesikli)
+                drawLine(
+                    color = AppColors.StepsAccent.copy(alpha = 0.4f),
+                    start = Offset(0f, goalY),
+                    end = Offset(size.width, goalY),
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+                )
+
+                lastWeek.forEachIndexed { index, day ->
+                    val barHeightFraction = (day.steps.toFloat() / maxValue).coerceIn(0.02f, 1f)
+                    val barHeight = size.height * barHeightFraction
+                    val x = index * (barWidth + spacingPx)
+                    val isToday = day.date == today
+
+                    drawRoundRect(
+                        color = if (isToday) AppColors.StepsAccent else AppColors.StepsAccent.copy(alpha = 0.35f),
+                        topLeft = Offset(x, size.height - barHeight),
+                        size = Size(barWidth, barHeight),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                lastWeek.forEach { day ->
+                    val isToday = day.date == today
+                    val dayName = day.date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
+                    Text(
+                        text = dayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isToday) AppColors.StepsAccent else AppColors.TextSecondary
+                    )
+                }
+            }
         }
     }
 }
