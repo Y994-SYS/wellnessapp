@@ -202,6 +202,10 @@ private fun StepsContent(
         }
 
         item {
+            DailyComparisonCard(todaySteps = todaySteps, history = history)
+        }
+
+        item {
             Text(
                 text = "Geçmiş Günler",
                 style = MaterialTheme.typography.titleMedium,
@@ -212,6 +216,53 @@ private fun StepsContent(
         }
         items(history) { day ->
             DailyStepsRow(day = day, onClick = { onDayClick(day) })
+        }
+    }
+}
+
+@Composable
+private fun DailyComparisonCard(todaySteps: Long, history: List<DailySteps>) {
+    val yesterdayDate = java.time.LocalDate.now().minusDays(1)
+    val yesterdayStepData = history.find { it.date == yesterdayDate }
+
+    if (yesterdayStepData == null) return
+
+    val diff = todaySteps - yesterdayStepData.steps
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface)
+    ) {
+        Box(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                when {
+                    diff > 0 -> {
+                        Text(
+                            text = "Dün senden ${diff} adım fazla attın 💪",
+                            color = AppColors.StepsAccent,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    diff < 0 -> {
+                        Text(
+                            text = "Dün ${diff.absoluteValue} adım daha fazlaydın, bugün toparlayabilirsin 🙂",
+                            color = AppColors.TextSecondary,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    else -> {
+                        Text(
+                            text = "Dünle aynı tempodasın 👍",
+                            color = AppColors.TextPrimary,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
         }
     }
 }
