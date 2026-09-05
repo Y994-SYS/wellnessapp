@@ -34,9 +34,6 @@ interface TaskDao {
     @Query("SELECT * FROM task_completions WHERE taskId = :taskId")
     suspend fun getCompletionsForTask(taskId: Int): List<TaskCompletionEntity>
 
-    @Query("UPDATE tasks SET currentStreak = :current, bestStreak = :best WHERE id = :taskId")
-    suspend fun updateStreak(taskId: Int, current: Int, best: Int)
-
     @Query("DELETE FROM tasks WHERE id = :taskId")
     suspend fun deleteTaskById(taskId: Int)
 
