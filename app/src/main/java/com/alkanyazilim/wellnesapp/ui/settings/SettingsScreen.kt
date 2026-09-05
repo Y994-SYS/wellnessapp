@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.alkanyazilim.wellnesapp.ui.settings
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -20,13 +21,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.alkanyazilim.wellnesapp.data.local.AppDatabase
 import com.alkanyazilim.wellnesapp.data.local.ThemeMode
+import com.alkanyazilim.wellnesapp.data.repository.BadgeRepository
 import com.alkanyazilim.wellnesapp.ui.theme.AppColors
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
@@ -41,6 +49,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val stepGoal by viewModel.stepGoal.collectAsState()
     val waterGoal by viewModel.waterGoal.collectAsState()
     val glassSize by viewModel.glassSize.collectAsState()
+    val badgeStates by viewModel.badgeStates.collectAsState()
 
     var nameField by remember(userName) { mutableStateOf(userName) }
     var weightField by remember(userWeight) { mutableStateOf(userWeight.toString()) }
@@ -50,6 +59,9 @@ fun SettingsScreen(onBack: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        viewModel.refreshBadges()
+    }
     // YENİ: İçe aktarma yıkıcı bir işlem olduğu için önce onay istiyoruz
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
@@ -294,6 +306,45 @@ fun SettingsScreen(onBack: () -> Unit) {
                     unit = "ml",
                     accentColor = AppColors.WaterAccent,
                     onChange = { viewModel.setGlassSize(it) }
+                )
+            }
+
+            // Rozetler bölümü
+            SettingsSection(title = "Rozetler") {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    content = {
+                        items(badgeStates) { badge ->
+                            val badgeAlpha = if (badge.isUnlocked) 1.0f else 0.3f
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(64.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .background(
+                                            color = AppColors.Surface,
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = badge.definition.emoji,
+                                        fontSize = 28.sp,
+                                        modifier = Modifier.alpha(badgeAlpha)
+                                    )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = badge.definition.title,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColors.TextPrimary.copy(alpha = badgeAlpha),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
                 )
             }
 

@@ -18,14 +18,15 @@ class Converters {
 }
 
 @Database(
-    entities = [TaskEntity::class, TaskCompletionEntity::class, RunSessionEntity::class],
-    version = 6,
+    entities = [TaskEntity::class, TaskCompletionEntity::class, RunSessionEntity::class, BadgeEntity::class],
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun runSessionDao(): RunSessionDao
+    abstract fun badgeDao(): BadgeDao
 
     companion object {
         @Volatile
@@ -51,7 +52,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val migrations: Array<Migration> = arrayOf(MIGRATION_4_5, MIGRATION_5_6)
+        internal val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS badges (badgeId TEXT NOT NULL PRIMARY KEY, unlockedAt INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        private val migrations: Array<Migration> = arrayOf(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(

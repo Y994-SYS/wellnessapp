@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.*
+import kotlin.math.abs // <-- Eklendi
 
 @Composable
 fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
@@ -249,7 +250,7 @@ private fun DailyComparisonCard(todaySteps: Long, history: List<DailySteps>) {
                     }
                     diff < 0 -> {
                         Text(
-                            text = "Dün ${diff.absoluteValue} adım daha fazlaydın, bugün toparlayabilirsin 🙂",
+                            text = "Dün ${abs(diff)} adım daha fazlaydın, bugün toparlayabilirsin 🙂", // DÜZELTİLDİ
                             color = AppColors.TextSecondary,
                             style = MaterialTheme.typography.bodyMedium
                         )

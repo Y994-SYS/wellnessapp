@@ -10,16 +10,19 @@ import com.alkanyazilim.wellnesapp.data.local.AppSettingsDataStore
 import com.alkanyazilim.wellnesapp.data.local.ThemeMode
 import com.alkanyazilim.wellnesapp.data.local.UserPreferences
 import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
+import com.alkanyazilim.wellnesapp.data.repository.BadgeUiState
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.alkanyazilim.wellnesapp.data.repository.BadgeRepository
 
 class SettingsViewModel(
     private val settingsStore: AppSettingsDataStore,
     private val userPreferences: UserPreferences,
     private val waterStore: WaterDataStore,
-    // YENİ
-    private val backupManager: BackupManager
+    private val backupManager: BackupManager,
+    private val badgeRepository: BadgeRepository
 ) : ViewModel() {
 
     val themeMode = settingsStore.themeMode
@@ -42,6 +45,12 @@ class SettingsViewModel(
     val glassSize = waterStore.glassSize
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 250)
 
+    val badgeStates: StateFlow<List<BadgeUiState>> = badgeRepository.badgeStates
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun refreshBadges() {
+        viewModelScope.launch { badgeRepository.refreshBadges() }
+    }
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settingsStore.setThemeMode(mode) }
     }
@@ -88,11 +97,19 @@ class SettingsViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val appContext = context.applicationContext
+            val db = com.alkanyazilim.wellnesapp.data.local.AppDatabase.getInstance(appContext)
+            val badgeDao = db.badgeDao()
+            val taskDao = db.taskDao()
+            val runSessionDao = db.runSessionDao()
+            val waterDataStore = WaterDataStore(appContext)
+            val badgeRepository = BadgeRepository(badgeDao, taskDao, runSessionDao, waterDataStore)
+
             return SettingsViewModel(
                 AppSettingsDataStore(appContext),
                 UserPreferences(appContext),
-                WaterDataStore(appContext),
-                BackupManager(appContext)
+                waterDataStore,
+                BackupManager(appContext),
+                badgeRepository
             ) as T
         }
     }
