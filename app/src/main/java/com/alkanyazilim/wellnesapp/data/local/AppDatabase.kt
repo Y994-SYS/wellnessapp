@@ -43,8 +43,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val migrations: Array<Migration> = arrayOf(MIGRATION_4_5)
 
+        internal val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE tasks ADD COLUMN currentStreak INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE tasks ADD COLUMN bestStreak INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val migrations: Array<Migration> = arrayOf(MIGRATION_4_5, MIGRATION_5_6)
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(

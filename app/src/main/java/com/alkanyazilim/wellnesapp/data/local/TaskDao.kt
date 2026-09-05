@@ -60,6 +60,8 @@ interface TaskDao {
     // kayıtları yanlış (ya da var olmayan) görevlere bağlanmış olurdu.
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTasksRestore(tasks: List<TaskEntity>)
+    @Query("UPDATE tasks SET currentStreak = :current, bestStreak = :best WHERE id = :taskId")
+    suspend fun updateStreak(taskId: Int, current: Int, best: Int)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCompletionsRestore(completions: List<TaskCompletionEntity>)

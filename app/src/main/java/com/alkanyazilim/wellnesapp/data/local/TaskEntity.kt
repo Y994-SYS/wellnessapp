@@ -17,5 +17,7 @@ data class TaskEntity(
     val icon: String = "📝",
     val reminderEnabled: Boolean = false,
     val reminderHour: Int? = null,
-    val reminderMinute: Int? = null
+    val reminderMinute: Int? = null,
+    val currentStreak: Int = 0,
+    val bestStreak: Int = 0
 )
