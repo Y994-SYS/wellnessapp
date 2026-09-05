@@ -219,6 +219,13 @@ private fun TaskRow(
                             color = AppColors.TextSecondary
                         )
                     }
+                    if (task.currentStreak > 1) {
+                        Text(
+                            text = "🔥 ${task.currentStreak} gün",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.StepsAccent
+                        )
+                    }
                 }
 
                 Checkbox(

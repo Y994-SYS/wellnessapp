@@ -19,7 +19,7 @@ class Converters {
 
 @Database(
     entities = [TaskEntity::class, TaskCompletionEntity::class, RunSessionEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

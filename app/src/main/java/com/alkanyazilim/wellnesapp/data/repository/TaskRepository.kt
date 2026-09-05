@@ -16,7 +16,9 @@ data class TaskWithStatus(
     val icon: String,
     val reminderEnabled: Boolean,
     val reminderHour: Int?,
-    val reminderMinute: Int?
+    val reminderMinute: Int?,
+    val currentStreak: Int,
+    val bestStreak: Int
 )
 
 class TaskRepository(private val dao: TaskDao) {
@@ -63,6 +65,9 @@ class TaskRepository(private val dao: TaskDao) {
 
     suspend fun setCompleted(taskId: Int, date: String, completed: Boolean) {
         dao.upsertCompletion(TaskCompletionEntity(taskId = taskId, date = date, isCompleted = completed))
+        val history = dao.getCompletionsForTask(taskId)
+        val (current, best) = TaskStreakCalculator.calculate(history)
+        dao.updateStreak(taskId, current, best)
     }
 
     fun getTasksForDate(date: String): Flow<List<TaskWithStatus>> {
@@ -81,7 +86,9 @@ class TaskRepository(private val dao: TaskDao) {
                         icon = task.icon,
                         reminderEnabled = task.reminderEnabled,
                         reminderHour = task.reminderHour,
-                        reminderMinute = task.reminderMinute
+                        reminderMinute = task.reminderMinute,
+                        currentStreak = task.currentStreak,
+                        bestStreak = task.bestStreak
                     )
                 }
         }
