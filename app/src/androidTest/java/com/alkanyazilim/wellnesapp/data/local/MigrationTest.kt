@@ -56,4 +56,36 @@ class MigrationTest {
         cursor.close()
         db.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    internal fun migrate5To6_preservesExistingTaskAndAddsStreakDefaults() {
+        // 1) v5 şemasıyla veritabanı oluştur, migration ÖNCESİ bir görev kaydı ekle
+        helper.createDatabase(TEST_DB, 5).apply {
+            execSQL(
+                """
+                INSERT INTO tasks (id, title, category, isRecurring, createdDate, icon, reminderEnabled, reminderHour, reminderMinute)
+                VALUES (1, 'Su ic', 'SAGLIK', 1, '2026-01-01', '💧', 0, NULL, NULL)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        // 2) Gerçek MIGRATION_5_6'yı çalıştır
+        val db = helper.runMigrationsAndValidate(TEST_DB, 6, true, AppDatabase.MIGRATION_5_6)
+
+        // 3) Eski satır hâlâ okunabiliyor mu?
+        val cursor = db.query("SELECT * FROM tasks WHERE id = 1")
+        assertTrue("Migration sonrası eski satır kaybolmuş", cursor.moveToFirst())
+
+        // 4) Yeni alanlar doğru default'u aldı mı?
+        val currentStreakIndex = cursor.getColumnIndex("currentStreak")
+        val bestStreakIndex = cursor.getColumnIndex("bestStreak")
+
+        assertEquals("Yeni alan default değeri yanlış", 0, cursor.getInt(currentStreakIndex))
+        assertEquals("Yeni alan default değeri yanlış", 0, cursor.getInt(bestStreakIndex))
+
+        cursor.close()
+        db.close()
+    }
 }
