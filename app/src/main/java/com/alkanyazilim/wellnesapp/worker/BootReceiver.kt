@@ -3,33 +3,21 @@ package com.alkanyazilim.wellnesapp.worker
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
-import com.alkanyazilim.wellnesapp.utils.AlarmScheduler
+import com.alkanyazilim.wellnesapp.data.local.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import com.alkanyazilim.wellnesapp.data.local.AppDatabase
-import com.alkanyazilim.wellnesapp.utils.TaskAlarmScheduler
+import com.alkanyazilim.wellnesapp.worker.TaskReminderScheduler
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            val store = WaterDataStore(context)
-            CoroutineScope(Dispatchers.IO).launch {
-                if (store.reminderEnabled.first()) {
-                    val interval = store.reminderIntervalMin.first()
-                    val start = store.reminderStartHour.first()
-                    val end = store.reminderEndHour.first()
-                    AlarmScheduler.scheduleNext(context, interval, start, end)
-                }
-            }
-        }
+        // NOT: Su hatırlatıcısı artık WorkManager ile zamanlanıyor — WorkManager'ın
+        // kendi veritabanı reboot'ta korunduğu için burada yeniden kurmaya gerek yok.
         CoroutineScope(Dispatchers.IO).launch {
             val taskDao = AppDatabase.getInstance(context).taskDao()
             val tasksWithReminder = taskDao.getTasksWithReminderEnabled()
             tasksWithReminder.forEach { task ->
                 if (task.reminderHour != null && task.reminderMinute != null) {
-                    TaskAlarmScheduler.schedule(context, task.id, task.reminderHour, task.reminderMinute)
+                    TaskReminderScheduler.schedule(context, task.id, task.reminderHour, task.reminderMinute)
                 }
             }
         }

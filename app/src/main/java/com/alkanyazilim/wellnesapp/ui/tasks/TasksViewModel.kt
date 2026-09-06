@@ -8,13 +8,12 @@ import com.alkanyazilim.wellnesapp.data.local.AppDatabase
 import com.alkanyazilim.wellnesapp.data.local.TaskCategory
 import com.alkanyazilim.wellnesapp.data.repository.TaskRepository
 import com.alkanyazilim.wellnesapp.data.repository.TaskWithStatus
-import com.alkanyazilim.wellnesapp.utils.TaskAlarmScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-
+import com.alkanyazilim.wellnesapp.worker.TaskReminderScheduler
 class TasksViewModel(
     private val context: Context,
     private val repository: TaskRepository
@@ -37,7 +36,7 @@ class TasksViewModel(
         viewModelScope.launch {
             val newId = repository.addTask(title, category, isRecurring, today(), icon, reminderEnabled, reminderHour, reminderMinute)
             if (reminderEnabled && reminderHour != null && reminderMinute != null) {
-                TaskAlarmScheduler.schedule(context, newId.toInt(), reminderHour, reminderMinute)
+                TaskReminderScheduler.schedule(context, newId.toInt(), reminderHour, reminderMinute)
             }
         }
     }
@@ -52,9 +51,9 @@ class TasksViewModel(
         viewModelScope.launch {
             repository.updateReminder(taskId, enabled, hour, minute)
             if (enabled && hour != null && minute != null) {
-                TaskAlarmScheduler.schedule(context, taskId, hour, minute)
+                TaskReminderScheduler.schedule(context, taskId, hour, minute)
             } else {
-                TaskAlarmScheduler.cancel(context, taskId)
+                TaskReminderScheduler.cancel(context, taskId)
             }
         }
     }
@@ -67,7 +66,7 @@ class TasksViewModel(
 
     fun deleteTask(taskId: Int) {
         viewModelScope.launch {
-            TaskAlarmScheduler.cancel(context, taskId)
+            TaskReminderScheduler.cancel(context, taskId)
             repository.deleteTaskById(taskId)
         }
     }

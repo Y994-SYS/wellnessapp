@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
@@ -21,8 +20,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WellnesApp">
 
-        <receiver android:name=".worker.TaskReminderReceiver" android:exported="false" />
-        <receiver android:name=".worker.WaterReminderReceiver" android:exported="false" />
+
         <receiver android:name=".worker.BootReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

@@ -5,13 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
-import com.alkanyazilim.wellnesapp.utils.AlarmScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-
+import com.alkanyazilim.wellnesapp.worker.WaterReminderScheduler
 class WaterViewModel(
     private val context: Context,
     private val store: WaterDataStore
@@ -72,9 +71,9 @@ class WaterViewModel(
         viewModelScope.launch {
             store.setReminderSettings(enabled, intervalMin, startHour, endHour, soundEnabled, soundUri)
             if (enabled) {
-                AlarmScheduler.scheduleNext(context, intervalMin, startHour, endHour)
+                WaterReminderScheduler.scheduleNext(context, intervalMin, startHour, endHour)
             } else {
-                AlarmScheduler.cancel(context)
+                WaterReminderScheduler.cancel(context)
             }
         }
     }
