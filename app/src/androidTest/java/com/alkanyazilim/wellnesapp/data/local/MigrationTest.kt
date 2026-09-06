@@ -88,4 +88,26 @@ class MigrationTest {
         cursor.close()
         db.close()
     }
+    @Test
+    @Throws(IOException::class)
+    internal fun migrate6To7_createsBadgesTable() {
+        // 1) v6 şemasıyla veritabanı oluştur (badges tablosu henüz yok)
+        helper.createDatabase(TEST_DB, 6).apply {
+            close()
+        }
+
+        // 2) Gerçek MIGRATION_6_7'yi çalıştır, üretilen şemanın 7.json ile eştiğini doğrular
+        val db = helper.runMigrationsAndValidate(TEST_DB, 7, true, AppDatabase.MIGRATION_6_7)
+
+        // 3) badges tablosuna gerçekten yazılabiliyor mu kontrol et
+        db.execSQL("INSERT INTO badges (badgeId, unlockedAt) VALUES ('test_badge', 123456)")
+        val cursor = db.query("SELECT * FROM badges WHERE badgeId = 'test_badge'")
+        assertTrue("badges tablosuna insert edilen satır okunamadı", cursor.moveToFirst())
+
+        val unlockedAtIndex = cursor.getColumnIndex("unlockedAt")
+        assertEquals(123456L, cursor.getLong(unlockedAtIndex))
+
+        cursor.close()
+        db.close()
+    }
 }

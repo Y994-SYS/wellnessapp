@@ -36,6 +36,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.*
 import kotlin.math.abs // <-- Eklendi
+import com.alkanyazilim.wellnesapp.widget.StepsWidgetScheduler
 
 @Composable
 fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
@@ -74,12 +75,17 @@ fun StepsScreen(modifier: Modifier = Modifier, navController: NavController) {
             try {
                 todaySteps = healthConnectManager.readTodaySteps()
                 history = healthConnectManager.readStepsForLastDays(14)
+                StepsWidgetScheduler.requestImmediateUpdate(context)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 errorMessage = "Veri okuma hatası: ${e::class.simpleName} - ${e.message}"
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        StepsWidgetScheduler.schedulePeriodicUpdates(context)
     }
 
     if (showGoalDialog) {

@@ -80,6 +80,9 @@ dependencies {
     implementation("androidx.test.ext:junit:1.3.0")
     implementation("androidx.test:runner:1.6.2")
     implementation("junit:junit:4.13.2")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.work:work-runtime-ktx:2.11.1")
+
 
     implementation(libs.lottie.compose)
 }
