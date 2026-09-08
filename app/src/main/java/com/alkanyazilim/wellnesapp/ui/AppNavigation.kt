@@ -19,7 +19,7 @@ import com.alkanyazilim.wellnesapp.ui.water.WaterReminderSettingsScreen
 import com.alkanyazilim.wellnesapp.ui.tasks.TasksScreen
 import com.alkanyazilim.wellnesapp.ui.workout.WorkoutHubScreen
 import com.alkanyazilim.wellnesapp.ui.workout.RunHistoryScreen
-
+import com.alkanyazilim.wellnesapp.ui.onboarding.OnboardingScreen
 @Composable
 fun AppNavigation(startDestination: String? = null) {
     val navController = rememberNavController()
@@ -32,6 +32,13 @@ fun AppNavigation(startDestination: String? = null) {
             startDestination = startDestination ?: Screen.Home.route,
             modifier = androidx.compose.ui.Modifier.padding(innerPadding)
         ) {
+            composable("onboarding") {
+                OnboardingScreen(onFinished = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo("onboarding") { inclusive = true }
+                    }
+                })
+            }
             composable(Screen.Home.route) { HomeScreen(navController = navController) }
             composable(Screen.Steps.route) { StepsScreen(navController = navController) }
             composable(Screen.Water.route) { WaterScreen(navController = navController) }

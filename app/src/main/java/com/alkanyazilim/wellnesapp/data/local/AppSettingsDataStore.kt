@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-
+import androidx.datastore.preferences.core.booleanPreferencesKey
 private val Context.settingsDataStore by preferencesDataStore(name = "app_settings")
 
 enum class ThemeMode { LIGHT, DARK, SYSTEM }
@@ -20,6 +20,7 @@ class AppSettingsDataStore(private val context: Context) {
         private val USER_WEIGHT_KG = intPreferencesKey("user_weight_kg")
         private val USER_HEIGHT_CM = intPreferencesKey("user_height_cm")
         private val USER_AGE = intPreferencesKey("user_age")
+        private val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
@@ -30,6 +31,7 @@ class AppSettingsDataStore(private val context: Context) {
     val userWeightKg: Flow<Int> = context.settingsDataStore.data.map { it[USER_WEIGHT_KG] ?: 70 }
     val userHeightCm: Flow<Int> = context.settingsDataStore.data.map { it[USER_HEIGHT_CM] ?: 170 }
     val userAge: Flow<Int> = context.settingsDataStore.data.map { it[USER_AGE] ?: 25 }
+    val onboardingCompleted: Flow<Boolean> = context.settingsDataStore.data.map { it[ONBOARDING_COMPLETED] ?: false }
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.settingsDataStore.edit { it[THEME_MODE] = mode.name }
@@ -42,5 +44,8 @@ class AppSettingsDataStore(private val context: Context) {
             it[USER_HEIGHT_CM] = heightCm
             it[USER_AGE] = age
         }
+    }
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.settingsDataStore.edit { it[ONBOARDING_COMPLETED] = completed }
     }
 }
