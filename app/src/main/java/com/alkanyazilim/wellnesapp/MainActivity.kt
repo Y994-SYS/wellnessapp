@@ -17,11 +17,23 @@ import com.alkanyazilim.wellnesapp.data.local.ThemeMode
 import com.alkanyazilim.wellnesapp.ui.AppNavigation
 import com.alkanyazilim.wellnesapp.ui.theme.WellnesAppTheme
 import androidx.compose.foundation.layout.Box
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.alkanyazilim.wellnesapp.update.UpdateManager
 
 class MainActivity : ComponentActivity() {
+    private lateinit var updateManager: UpdateManager
+
+    private val updateFlowLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { /* kullanıcı akışı iptal etse bile sorun değil, tekrar bir sonraki açılışta sorulur */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        updateManager = UpdateManager(this)
+        updateManager.checkForUpdate(updateFlowLauncher)
 
         val startDestinationFromNotification = intent?.getStringExtra("navigate_to")
 
@@ -39,6 +51,20 @@ class MainActivity : ComponentActivity() {
             }
 
             WellnesAppTheme(darkTheme = darkTheme) {
+                val updateReady by updateManager.updateReadyToInstall.collectAsState()
+
+                if (updateReady) {
+                    AlertDialog(
+                        onDismissRequest = { /* kapatılamaz, kullanıcı karar versin */ },
+                        title = { Text("Güncelleme hazır") },
+                        text = { Text("Yeni bir sürüm indirildi. Uygulamayı hemen yeniden başlatarak güncelleyebilirsin.") },
+                        confirmButton = {
+                            TextButton(onClick = { updateManager.completeUpdate() }) {
+                                Text("Yeniden Başlat")
+                            }
+                        }
+                    )
+                }
                 val completed = onboardingCompleted
                 if (completed == null) {
                     // Onboarding durumu henüz okunmadı — kısa bir an boş ekran
@@ -49,6 +75,19 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(startDestination = resolvedStart)
                 }
             }
+        }
+    }
+    override fun onResume() {
+        super.onResume()
+        if (::updateManager.isInitialized) {
+            updateManager.checkForStalledUpdate()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::updateManager.isInitialized) {
+            updateManager.unregister()
         }
     }
 }

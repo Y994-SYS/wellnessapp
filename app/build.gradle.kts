@@ -12,8 +12,8 @@ android {
         applicationId = "com.alkanyazilim.wellnessapp"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -82,7 +82,7 @@ dependencies {
     implementation("junit:junit:4.13.2")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.11.1")
-
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 
     implementation(libs.lottie.compose)
 }
