@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.alkanyazilim.wellnesapp.worker.WaterReminderScheduler
+import kotlinx.coroutines.flow.first
 class WaterViewModel(
     private val context: Context,
     private val store: WaterDataStore
@@ -55,8 +56,15 @@ class WaterViewModel(
         entries.filterKeys { it.year == today.year }.values.sum()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    fun addGlass() = viewModelScope.launch { store.addWater(today(), glassSize.value) }
-    fun removeGlass() = viewModelScope.launch { store.addWater(today(), -glassSize.value) }
+    fun addGlass() = viewModelScope.launch {
+        val currentGlassSize = store.glassSize.first()
+        store.addWater(today(), currentGlassSize)
+    }
+
+    fun removeGlass() = viewModelScope.launch {
+        val currentGlassSize = store.glassSize.first()
+        store.addWater(today(), -currentGlassSize)
+    }
     fun updateGoal(ml: Int) = viewModelScope.launch { store.setDailyGoal(ml) }
     fun updateGlassSize(ml: Int) = viewModelScope.launch { store.setGlassSize(ml) }
 

@@ -249,7 +249,7 @@ private fun DailyComparisonCard(todaySteps: Long, history: List<DailySteps>) {
                 when {
                     diff > 0 -> {
                         Text(
-                            text = "Dün senden ${diff} adım fazla attın 💪",
+                            text = "Bugün dünden ${diff} adım fazla attın 💪",
                             color = AppColors.StepsAccent,
                             style = MaterialTheme.typography.bodyMedium
                         )
