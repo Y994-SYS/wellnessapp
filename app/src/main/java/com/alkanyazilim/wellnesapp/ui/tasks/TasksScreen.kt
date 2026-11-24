@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.alkanyazilim.wellnesapp.ui.tasks
 
+import android.app.TimePickerDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -16,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +35,7 @@ import com.alkanyazilim.wellnesapp.data.model.TaskTemplate
 import com.alkanyazilim.wellnesapp.data.model.taskTemplates
 import com.alkanyazilim.wellnesapp.data.repository.TaskWithStatus
 import com.alkanyazilim.wellnesapp.ui.theme.AppColors
+import java.util.Calendar
 
 private fun categoryLabel(category: TaskCategory): String = when (category) {
     TaskCategory.SAGLIK -> "Sağlık"
@@ -43,6 +47,11 @@ private fun categoryColor(category: TaskCategory): Color = when (category) {
     TaskCategory.SAGLIK -> AppColors.TasksAccent  // Yeşil
     TaskCategory.SPOR -> AppColors.StepsAccent    // Turuncu
     TaskCategory.KISISEL -> AppColors.HomeAccent  // Mor
+}
+
+private fun formatTime(hour: Int?, minute: Int?): String {
+    if (hour == null || minute == null) return ""
+    return String.format("%02d:%02d", hour, minute)
 }
 
 @Composable
@@ -125,8 +134,8 @@ fun TasksScreen(modifier: Modifier = Modifier) {
         TaskDialog(
             initialTask = null,
             onDismiss = { showAddDialog = false },
-            onConfirm = { title, category, isRecurring, icon ->
-                viewModel.addTask(title, category, isRecurring, icon)
+            onConfirm = { title, category, isRecurring, icon, reminderEnabled, reminderHour, reminderMinute ->
+                viewModel.addTask(title, category, isRecurring, icon, reminderEnabled, reminderHour, reminderMinute)
                 showAddDialog = false
             }
         )
@@ -136,8 +145,9 @@ fun TasksScreen(modifier: Modifier = Modifier) {
         TaskDialog(
             initialTask = task,
             onDismiss = { taskBeingEdited = null },
-            onConfirm = { title, category, isRecurring, icon ->
+            onConfirm = { title, category, isRecurring, icon, reminderEnabled, reminderHour, reminderMinute ->
                 viewModel.updateTask(task.id, title, category, isRecurring, icon)
+                viewModel.setReminder(task.id, reminderEnabled, reminderHour, reminderMinute)
                 taskBeingEdited = null
             }
         )
@@ -212,19 +222,35 @@ private fun TaskRow(
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                         color = if (task.isCompleted) AppColors.TextSecondary else AppColors.TextPrimary
                     )
-                    if (task.isRecurring) {
-                        Text(
-                            text = "Her gün tekrarlar",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.TextSecondary
-                        )
-                    }
-                    if (task.currentStreak > 1) {
-                        Text(
-                            text = "🔥 ${task.currentStreak} gün",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.StepsAccent
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (task.isRecurring) {
+                            Text(
+                                text = "Her gün tekrarlar",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+                        }
+                        if (task.reminderEnabled && task.reminderHour != null && task.reminderMinute != null) {
+                            if (task.isRecurring) {
+                                Text(
+                                    text = " · ",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColors.TextSecondary
+                                )
+                            }
+                            Icon(
+                                Icons.Filled.Notifications,
+                                contentDescription = "Hatırlatıcı aktif",
+                                tint = AppColors.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                text = formatTime(task.reminderHour, task.reminderMinute),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+                        }
                     }
                 }
 
@@ -252,15 +278,34 @@ private fun TaskRow(
 private fun TaskDialog(
     initialTask: TaskWithStatus?,
     onDismiss: () -> Unit,
-    onConfirm: (String, TaskCategory, Boolean, String) -> Unit
+    onConfirm: (String, TaskCategory, Boolean, String, Boolean, Int?, Int?) -> Unit
 ) {
+    val context = LocalContext.current
     var title by remember { mutableStateOf(initialTask?.title ?: "") }
     var selectedCategory by remember { mutableStateOf(initialTask?.category ?: TaskCategory.KISISEL) }
     var isRecurring by remember { mutableStateOf(initialTask?.isRecurring ?: false) }
     var selectedIcon by remember { mutableStateOf(initialTask?.icon ?: "📝") }
 
+    var reminderEnabled by remember { mutableStateOf(initialTask?.reminderEnabled ?: false) }
+    var reminderHour by remember { mutableStateOf(initialTask?.reminderHour ?: 9) }
+    var reminderMinute by remember { mutableStateOf(initialTask?.reminderMinute ?: 0) }
+
     val isEditing = initialTask != null
     val accentColor = categoryColor(selectedCategory)
+
+    fun openTimePicker() {
+        TimePickerDialog(
+            context,
+            { _, hour, minute ->
+                reminderHour = hour
+                reminderMinute = minute
+                reminderEnabled = true
+            },
+            reminderHour,
+            reminderMinute,
+            true
+        ).show()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -388,11 +433,66 @@ private fun TaskDialog(
                         )
                     )
                 }
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(16.dp))
+
+                // YENİ: Hatırlatıcı bölümü
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (reminderEnabled) Icons.Filled.Notifications else Icons.Filled.NotificationsOff,
+                            contentDescription = null,
+                            tint = if (reminderEnabled) accentColor else AppColors.TextSecondary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Hatırlatıcı", color = AppColors.TextPrimary)
+                    }
+                    Switch(
+                        checked = reminderEnabled,
+                        onCheckedChange = { checked ->
+                            reminderEnabled = checked
+                            if (checked) openTimePicker()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = accentColor,
+                            checkedThumbColor = Color.White
+                        )
+                    )
+                }
+
+                if (reminderEnabled) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { openTimePicker() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = accentColor)
+                    ) {
+                        Text("Saat: ${formatTime(reminderHour, reminderMinute)} — değiştir")
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { if (title.isNotBlank()) onConfirm(title.trim(), selectedCategory, isRecurring, selectedIcon) },
+                onClick = {
+                    if (title.isNotBlank()) {
+                        onConfirm(
+                            title.trim(),
+                            selectedCategory,
+                            isRecurring,
+                            selectedIcon,
+                            reminderEnabled,
+                            if (reminderEnabled) reminderHour else null,
+                            if (reminderEnabled) reminderMinute else null
+                        )
+                    }
+                },
                 enabled = title.isNotBlank()
             ) {
                 Text(

@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.alkanyazilim.wellnesapp.data.local.AppSettingsDataStore
 import com.alkanyazilim.wellnesapp.data.local.ThemeMode
+import com.alkanyazilim.wellnesapp.data.repository.BadgeRepository
 import com.alkanyazilim.wellnesapp.ui.AppNavigation
 import com.alkanyazilim.wellnesapp.ui.theme.WellnesAppTheme
 import androidx.compose.foundation.layout.Box
@@ -51,6 +53,11 @@ class MainActivity : ComponentActivity() {
             }
 
             WellnesAppTheme(darkTheme = darkTheme) {
+                val appContext = LocalContext.current.applicationContext
+                LaunchedEffect(Unit) {
+                    BadgeRepository.create(appContext).refreshBadges()
+                }
+
                 val updateReady by updateManager.updateReadyToInstall.collectAsState()
 
                 if (updateReady) {

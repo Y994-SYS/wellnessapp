@@ -10,12 +10,13 @@ import com.alkanyazilim.wellnesapp.data.local.AppSettingsDataStore
 import com.alkanyazilim.wellnesapp.data.local.ThemeMode
 import com.alkanyazilim.wellnesapp.data.local.UserPreferences
 import com.alkanyazilim.wellnesapp.data.local.WaterDataStore
+import com.alkanyazilim.wellnesapp.data.repository.BadgeRepository
 import com.alkanyazilim.wellnesapp.data.repository.BadgeUiState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.alkanyazilim.wellnesapp.data.repository.BadgeRepository
 
 class SettingsViewModel(
     private val settingsStore: AppSettingsDataStore,
@@ -28,14 +29,8 @@ class SettingsViewModel(
     val themeMode = settingsStore.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
-    val userName = settingsStore.userName
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userWeightKg = settingsStore.userWeightKg
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 70)
-    val userHeightCm = settingsStore.userHeightCm
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 170)
-    val userAge = settingsStore.userAge
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 25)
 
     val stepGoal = userPreferences.stepGoal
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences.DEFAULT_STEP_GOAL)
@@ -51,12 +46,23 @@ class SettingsViewModel(
     fun refreshBadges() {
         viewModelScope.launch { badgeRepository.refreshBadges() }
     }
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settingsStore.setThemeMode(mode) }
     }
 
-    fun saveProfile(name: String, weightKg: Int, heightCm: Int, age: Int) {
-        viewModelScope.launch { settingsStore.setProfile(name, weightKg, heightCm, age) }
+    /**
+     * Sadece kilo kaydedilir. İsim/boy/yaş UI'dan kalktı ama DataStore imzası
+     * değişmesin diye mevcut kayıtlı değerler .first() ile okunup aynen geri yazılır.
+     * (stateIn değeri kullanılmaz: abone yokken varsayılan değeri verir ve eski veriyi ezerdi.)
+     */
+    fun saveWeight(weightKg: Int) {
+        viewModelScope.launch {
+            val name = settingsStore.userName.first()
+            val height = settingsStore.userHeightCm.first()
+            val age = settingsStore.userAge.first()
+            settingsStore.setProfile(name, weightKg, height, age)
+        }
     }
 
     fun setStepGoal(goal: Int) {
@@ -71,7 +77,7 @@ class SettingsViewModel(
         viewModelScope.launch { waterStore.setGlassSize(ml) }
     }
 
-    // ---- YENİ: Yedekle / Geri Yükle ----
+    // ---- Yedekle / Geri Yükle ----
 
     /** Tüm veriyi [uri]'ye JSON olarak yazar. Sonucu [onComplete] ile bildirir. */
     fun exportData(uri: Uri, onComplete: (Result<Unit>) -> Unit) {
@@ -83,8 +89,7 @@ class SettingsViewModel(
 
     /**
      * [uri]'deki yedek dosyasını okuyup mevcut TÜM yerel veriyi bununla değiştirir.
-     * Bu işlem yıkıcıdır (destructive) — UI tarafında çağırmadan önce kullanıcıdan
-     * onay almalısın.
+     * Yıkıcı işlem: UI tarafında çağırmadan önce kullanıcıdan onay alınmalı.
      */
     fun importData(uri: Uri, onComplete: (Result<Unit>) -> Unit) {
         viewModelScope.launch {
@@ -97,12 +102,8 @@ class SettingsViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val appContext = context.applicationContext
-            val db = com.alkanyazilim.wellnesapp.data.local.AppDatabase.getInstance(appContext)
-            val badgeDao = db.badgeDao()
-            val taskDao = db.taskDao()
-            val runSessionDao = db.runSessionDao()
             val waterDataStore = WaterDataStore(appContext)
-            val badgeRepository = BadgeRepository(badgeDao, taskDao, runSessionDao, waterDataStore)
+            val badgeRepository = BadgeRepository.create(appContext)
 
             return SettingsViewModel(
                 AppSettingsDataStore(appContext),

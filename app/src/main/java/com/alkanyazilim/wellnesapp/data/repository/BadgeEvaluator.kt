@@ -5,14 +5,14 @@ import java.time.LocalDate
 object BadgeEvaluator {
     fun evaluate(
         hasAnyRun: Boolean,
-        maxStepsInSingleRun: Long,
+        maxDailySteps: Long,
         totalRunDistanceKm: Double,
         maxTaskBestStreak: Int,
         bestWaterStreak: Int
     ): Set<String> {
         val unlocked = mutableSetOf<String>()
         if (hasAnyRun) unlocked += "ilk_adim"
-        if (maxStepsInSingleRun >= 10000) unlocked += "10k_kulubu"
+        if (maxDailySteps >= 10000) unlocked += "10k_kulubu"
         if (bestWaterStreak >= 7) unlocked += "su_ustasi"
         if (maxTaskBestStreak >= 7) unlocked += "aliskanlik_kahramani"
         if (totalRunDistanceKm >= 42.0) unlocked += "maratoncu"
